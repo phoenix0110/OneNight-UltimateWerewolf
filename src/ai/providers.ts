@@ -34,7 +34,7 @@ export const BUILT_IN_PROVIDERS: Omit<ProviderConfig, 'apiKey'>[] = [
     id: 'kimi',
     name: 'Kimi',
     baseUrl: 'https://api.moonshot.cn/v1',
-    model: 'moonshot-v1-8k',
+    model: 'kimi-k2.5',
   },
 ];
 
@@ -57,7 +57,9 @@ export function createProvider(config: ProviderConfig): ChatProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`AI request failed: ${response.statusText}`);
+        const errData = await response.json().catch(() => null);
+        const detail = errData?.error || response.statusText;
+        throw new Error(detail);
       }
 
       const data = await response.json();

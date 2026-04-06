@@ -53,6 +53,9 @@ export interface GameState {
   winners: ('village' | 'werewolf' | 'tanner')[];
   humanPlayerIndex: number;
   config: GameConfig;
+  speakingOrder: number[];
+  currentSpeakerIndex: number;
+  discussionRound: number;
 }
 
 export function createInitialState(config: GameConfig): GameState {
@@ -82,6 +85,9 @@ export function createInitialState(config: GameConfig): GameState {
     winners: [],
     humanPlayerIndex: 0,
     config,
+    speakingOrder: [],
+    currentSpeakerIndex: 0,
+    discussionRound: 0,
   };
 }
 

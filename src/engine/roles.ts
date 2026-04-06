@@ -19,6 +19,7 @@ export interface RoleDefinition {
   team: Team;
   nightOrder: number; // -1 = no night action
   maxCount: number;
+  minCount: number; // required roles can't go below this
   hasNightAction: boolean;
   isMvpRole: boolean;
 }
@@ -29,6 +30,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: 0,
     maxCount: 1,
+    minCount: 0,
     hasNightAction: true,
     isMvpRole: false,
   },
@@ -37,6 +39,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'werewolf',
     nightOrder: 1,
     maxCount: 2,
+    minCount: 1,
     hasNightAction: true,
     isMvpRole: true,
   },
@@ -45,6 +48,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'werewolf',
     nightOrder: 2,
     maxCount: 1,
+    minCount: 0,
     hasNightAction: true,
     isMvpRole: false,
   },
@@ -53,6 +57,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: 3,
     maxCount: 2,
+    minCount: 0,
     hasNightAction: true,
     isMvpRole: false,
   },
@@ -61,6 +66,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: 4,
     maxCount: 1,
+    minCount: 1,
     hasNightAction: true,
     isMvpRole: true,
   },
@@ -69,6 +75,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: 5,
     maxCount: 1,
+    minCount: 0,
     hasNightAction: true,
     isMvpRole: true,
   },
@@ -77,6 +84,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: 6,
     maxCount: 1,
+    minCount: 0,
     hasNightAction: true,
     isMvpRole: true,
   },
@@ -85,6 +93,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: 7,
     maxCount: 1,
+    minCount: 0,
     hasNightAction: true,
     isMvpRole: false,
   },
@@ -93,6 +102,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: 8,
     maxCount: 1,
+    minCount: 0,
     hasNightAction: true,
     isMvpRole: true,
   },
@@ -101,6 +111,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: -1,
     maxCount: 3,
+    minCount: 1,
     hasNightAction: false,
     isMvpRole: true,
   },
@@ -109,6 +120,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'village',
     nightOrder: -1,
     maxCount: 1,
+    minCount: 0,
     hasNightAction: false,
     isMvpRole: false,
   },
@@ -117,6 +129,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     team: 'tanner',
     nightOrder: -1,
     maxCount: 1,
+    minCount: 0,
     hasNightAction: false,
     isMvpRole: false,
   },

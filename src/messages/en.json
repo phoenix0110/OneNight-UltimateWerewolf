@@ -45,7 +45,7 @@
     "startGame": "Start Game",
     "aiProvider": "AI Provider",
     "apiKey": "API Key (optional)",
-    "apiKeyHint": "Without an API key, AI will use preset responses"
+    "apiKeyHint": "API key is required for AI to speak during discussion"
   },
   "roles": {
     "werewolf": "Werewolf",
@@ -94,6 +94,9 @@
     "send": "Send",
     "quickSpeech": "Quick Speech",
     "aiThinking": "AI is thinking...",
+    "yourTurn": "Your turn to speak!",
+    "isSpeaking": "is speaking...",
+    "nextRound": "Next Round",
     "proceedToVote": "Proceed to Vote",
     "vote": "Vote Phase",
     "voteDesc": "Who do you want to eliminate?",

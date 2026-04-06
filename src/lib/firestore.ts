@@ -48,6 +48,8 @@ export async function saveGameResult(
   userId: string,
   record: Omit<GameRecord, 'userId' | 'timestamp'>
 ): Promise<void> {
+  if (!db) return;
+
   await addDoc(collection(db, 'gameHistory'), {
     ...record,
     userId,
@@ -82,6 +84,8 @@ export async function saveGameResult(
 export async function getUserProfile(
   userId: string
 ): Promise<UserProfile | null> {
+  if (!db) return null;
+
   const userRef = doc(db, 'users', userId);
   const snap = await getDoc(userRef);
   return snap.exists() ? (snap.data() as UserProfile) : null;
@@ -91,6 +95,8 @@ export async function getGameHistory(
   userId: string,
   maxResults: number = 20
 ): Promise<GameRecord[]> {
+  if (!db) return [];
+
   const q = query(
     collection(db, 'gameHistory'),
     where('userId', '==', userId),
@@ -104,6 +110,8 @@ export async function getGameHistory(
 export async function getLeaderboard(
   maxResults: number = 50
 ): Promise<{ displayName: string; rankPoints: number; rank: string }[]> {
+  if (!db) return [];
+
   const q = query(
     collection(db, 'users'),
     orderBy('rankPoints', 'desc'),

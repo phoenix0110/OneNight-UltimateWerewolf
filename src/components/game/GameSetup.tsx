@@ -5,22 +5,13 @@ import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/game-store';
 import { ROLES, RoleId } from '@/engine/roles';
+import { DEFAULT_ROLE_CONFIGS } from '@/engine/role-presets';
 import { BUILT_IN_PROVIDERS } from '@/ai/providers';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 
-const ALL_ROLE_OPTIONS: { id: RoleId; count: number }[] = [
-  { id: 'werewolf', count: 2 },
-  { id: 'seer', count: 1 },
-  { id: 'robber', count: 1 },
-  { id: 'troublemaker', count: 1 },
-  { id: 'villager', count: 3 },
-  { id: 'insomniac', count: 1 },
-  { id: 'drunk', count: 1 },
-  { id: 'hunter', count: 1 },
-  { id: 'tanner', count: 1 },
-  { id: 'minion', count: 1 },
-  { id: 'mason', count: 2 },
-  { id: 'doppelganger', count: 1 },
+const ALL_ROLE_OPTIONS: RoleId[] = [
+  'werewolf', 'seer', 'robber', 'troublemaker', 'villager',
+  'insomniac', 'drunk', 'hunter', 'tanner', 'minion', 'mason', 'doppelganger',
 ];
 
 export default function GameSetup() {
@@ -32,35 +23,46 @@ export default function GameSetup() {
   const startGame = useGameStore((s) => s.startGame);
   const setProvider = useGameStore((s) => s.setProvider);
   const setLocale = useGameStore((s) => s.setLocale);
+  const providerConfig = useGameStore((s) => s.providerConfig);
 
   const [playerName, setPlayerName] = useState('');
   const [playerCount, setPlayerCount] = useState(5);
-  const [selectedRoles, setSelectedRoles] = useState<RoleId[]>([
-    'werewolf', 'werewolf', 'seer', 'robber', 'troublemaker',
-    'villager', 'villager', 'insomniac',
-  ]);
-  const [selectedProvider, setSelectedProvider] = useState('openai');
-  const [apiKey, setApiKey] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<RoleId[]>(
+    [...DEFAULT_ROLE_CONFIGS[5]]
+  );
+  const [selectedProvider, setSelectedProvider] = useState(providerConfig.id);
+  const [apiKey, setApiKey] = useState(providerConfig.apiKey);
 
   const requiredRoles = playerCount + 3;
 
-  const toggleRole = (roleId: RoleId) => {
-    const currentCount = selectedRoles.filter((r) => r === roleId).length;
-    const maxCount = ROLES[roleId].maxCount;
+  const getRoleCount = (roleId: RoleId) =>
+    selectedRoles.filter((r) => r === roleId).length;
 
-    if (currentCount < maxCount && selectedRoles.length < requiredRoles) {
-      setSelectedRoles([...selectedRoles, roleId]);
-    } else if (currentCount > 0) {
-      const idx = selectedRoles.lastIndexOf(roleId);
-      setSelectedRoles(selectedRoles.filter((_, i) => i !== idx));
-    }
+  const increaseRole = (roleId: RoleId) => {
+    const current = getRoleCount(roleId);
+    if (current >= ROLES[roleId].maxCount) return;
+    if (selectedRoles.length >= requiredRoles) return;
+    setSelectedRoles([...selectedRoles, roleId]);
+  };
+
+  const decreaseRole = (roleId: RoleId) => {
+    const current = getRoleCount(roleId);
+    if (current <= ROLES[roleId].minCount) return;
+    if (current <= 0) return;
+    const idx = selectedRoles.lastIndexOf(roleId);
+    setSelectedRoles(selectedRoles.filter((_, i) => i !== idx));
+  };
+
+  const handlePlayerCountChange = (n: number) => {
+    setPlayerCount(n);
+    setSelectedRoles([...DEFAULT_ROLE_CONFIGS[n]]);
   };
 
   const canStart = selectedRoles.length === requiredRoles && playerName.trim();
 
   const handleStart = () => {
     const provider = BUILT_IN_PROVIDERS.find((p) => p.id === selectedProvider)!;
-    setProvider({ ...provider, apiKey });
+    setProvider({ ...provider, apiKey: apiKey.trim() });
     setLocale(locale);
 
     startGame({
@@ -106,13 +108,10 @@ export default function GameSetup() {
           {t('setup.playerCount')}: {playerCount}
         </label>
         <div className="flex gap-2">
-          {[3, 4, 5, 6, 7, 8].map((n) => (
+          {[5, 6, 7, 8].map((n) => (
             <button
               key={n}
-              onClick={() => {
-                setPlayerCount(n);
-                setSelectedRoles([]);
-              }}
+              onClick={() => handlePlayerCountChange(n)}
               className={`pixel-btn px-3 py-1 text-[10px] ${
                 playerCount === n ? 'pixel-btn-success' : ''
               }`}
@@ -135,32 +134,58 @@ export default function GameSetup() {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          {ALL_ROLE_OPTIONS.map(({ id }) => {
-            const currentCount = selectedRoles.filter((r) => r === id).length;
+          {ALL_ROLE_OPTIONS.map((id) => {
+            const currentCount = getRoleCount(id);
             const maxCount = ROLES[id].maxCount;
+            const minCount = ROLES[id].minCount;
+            const isRequired = minCount > 0;
+            const canDecrease = currentCount > minCount;
+            const canIncrease = currentCount < maxCount && selectedRoles.length < requiredRoles;
 
             return (
-              <button
+              <div
                 key={id}
-                onClick={() => toggleRole(id)}
-                className={`pixel-box p-2 text-left rounded transition-colors ${
+                className={`pixel-box p-2 rounded transition-colors ${
                   currentCount > 0
                     ? 'border-pixel-lime border-2'
-                    : 'hover:border-pixel-gray border-2 border-transparent'
+                    : 'border-2 border-transparent'
                 }`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-0.5">
                   <span className="text-[10px] text-pixel-cyan">
                     {t(`roles.${id}`)}
+                    {isRequired && (
+                      <span className="text-pixel-yellow text-[7px] ml-1">*</span>
+                    )}
                   </span>
-                  <span className="text-[8px] text-pixel-yellow">
-                    {currentCount}/{maxCount}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => decreaseRole(id)}
+                      disabled={!canDecrease}
+                      className={`w-5 h-5 pixel-btn text-[10px] flex items-center justify-center ${
+                        !canDecrease ? 'opacity-30 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      -
+                    </button>
+                    <span className="text-[9px] text-pixel-yellow w-5 text-center">
+                      {currentCount}
+                    </span>
+                    <button
+                      onClick={() => increaseRole(id)}
+                      disabled={!canIncrease}
+                      className={`w-5 h-5 pixel-btn text-[10px] flex items-center justify-center ${
+                        !canIncrease ? 'opacity-30 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                <div className="text-[7px] text-pixel-light mt-0.5">
+                <div className="text-[7px] text-pixel-light">
                   {t(`roles.${id}Desc`)}
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

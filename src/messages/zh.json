@@ -45,7 +45,7 @@
     "startGame": "开始游戏",
     "aiProvider": "AI 供应商",
     "apiKey": "API 密钥（可选）",
-    "apiKeyHint": "不提供密钥时，AI将使用预设回复"
+    "apiKeyHint": "需要 API 密钥才能让 AI 在讨论中发言"
   },
   "roles": {
     "werewolf": "狼人",
@@ -94,6 +94,9 @@
     "send": "发送",
     "quickSpeech": "快捷发言",
     "aiThinking": "AI思考中...",
+    "yourTurn": "轮到你发言！",
+    "isSpeaking": "正在发言...",
+    "nextRound": "下一轮",
     "proceedToVote": "进入投票",
     "vote": "投票阶段",
     "voteDesc": "你想淘汰谁？",

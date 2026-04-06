@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 
-import { buildChatMessages, buildVoteChatMessages, getFallbackResponse, parseVoteResponse } from '@/ai/decision';
-import { getBuiltInSpeeches, BuiltInSpeech, fillTemplate } from '@/ai/built-in-speeches';
+import { buildChatMessages, buildVoteChatMessages, parseVoteResponse } from '@/ai/decision';
+import { BuiltInSpeech, fillTemplate, getBuiltInSpeeches } from '@/ai/built-in-speeches';
 import { AIPersonality, generatePersonalities } from '@/ai/personality';
-import { createProvider, ProviderConfig, BUILT_IN_PROVIDERS } from '@/ai/providers';
+import { DiscussionContext } from '@/ai/prompts';
+import { createProvider, BUILT_IN_PROVIDERS, ProviderConfig } from '@/ai/providers';
 import { ChatMessage, createInitialState, GameConfig, GameState } from '@/engine/game-state';
 import { NightActionChoice, processAllNightActions, resolveNightAction } from '@/engine/night-actions';
 import { RoleId } from '@/engine/roles';
@@ -18,6 +19,7 @@ interface GameStore extends GameState {
   isProcessing: boolean;
   humanNightAction: NightActionChoice | null;
   nightRevealed: { targetIndex: number; role: RoleId }[] | null;
+  thinkingPlayerId: number | null;
 
   setLocale: (locale: string) => void;
   setProvider: (config: ProviderConfig) => void;
@@ -26,8 +28,10 @@ interface GameStore extends GameState {
   setHumanNightAction: (action: NightActionChoice) => void;
   executeNightPhase: () => void;
   addChatMessage: (text: string, isBuiltIn: boolean) => void;
-  triggerAIChat: (playerIndex: number) => Promise<void>;
+  triggerAIChat: (playerIndex: number, discussionContext?: DiscussionContext) => Promise<void>;
   runAIDiscussion: () => Promise<void>;
+  advanceSpeaker: () => void;
+  submitHumanSpeech: (text: string, isBuiltIn: boolean) => void;
   proceedToVote: () => void;
   castVote: (targetId: number) => void;
   runAIVotes: () => Promise<void>;
@@ -42,6 +46,21 @@ const DEFAULT_PROVIDER: ProviderConfig = {
   apiKey: '',
 };
 
+function generateSpeakingOrder(players: { id: number; isHuman: boolean }[]): number[] {
+  const ids = players.map((p) => p.id);
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  const humanIdx = ids.findIndex((id) => players.find((p) => p.id === id)?.isHuman);
+  if (humanIdx === 0 && ids.length > 1) {
+    const newPos = 1 + Math.floor(Math.random() * (ids.length - 1));
+    const [humanId] = ids.splice(humanIdx, 1);
+    ids.splice(newPos, 0, humanId);
+  }
+  return ids;
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   phase: 'setup',
   players: [],
@@ -55,6 +74,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   winners: [],
   humanPlayerIndex: 0,
   config: { playerCount: 5, playerName: 'You', roles: [], aiProvider: 'openai' },
+  speakingOrder: [],
+  currentSpeakerIndex: 0,
+  discussionRound: 0,
   aiPersonalities: [],
   providerConfig: DEFAULT_PROVIDER,
   locale: 'en',
@@ -62,6 +84,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isProcessing: false,
   humanNightAction: null,
   nightRevealed: null,
+  thinkingPlayerId: null,
 
   setLocale: (locale) => set({ locale }),
 
@@ -84,6 +107,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isProcessing: false,
       humanNightAction: null,
       nightRevealed: null,
+      thinkingPlayerId: null,
     });
   },
 
@@ -104,10 +128,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       state as GameState,
       state.humanNightAction
     );
+    const order = generateSpeakingOrder(newState.players);
     set({
       ...newState,
       phase: 'day',
       chatMessages: [],
+      speakingOrder: order,
+      currentSpeakerIndex: 0,
+      discussionRound: 1,
     });
   },
 
@@ -124,7 +152,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ chatMessages: [...state.chatMessages, message] });
   },
 
-  triggerAIChat: async (playerIndex) => {
+  submitHumanSpeech: (text, isBuiltIn) => {
+    const state = get();
+    const humanPlayer = state.players[state.humanPlayerIndex];
+    const currentSpeakerId = state.speakingOrder[state.currentSpeakerIndex];
+    if (currentSpeakerId !== humanPlayer.id) return;
+
+    const message: ChatMessage = {
+      playerId: humanPlayer.id,
+      playerName: humanPlayer.name,
+      text,
+      timestamp: Date.now(),
+      isBuiltIn,
+    };
+    set({
+      chatMessages: [...state.chatMessages, message],
+      currentSpeakerIndex: state.currentSpeakerIndex + 1,
+    });
+  },
+
+  advanceSpeaker: () => {
+    set((state) => ({ currentSpeakerIndex: state.currentSpeakerIndex + 1 }));
+  },
+
+  triggerAIChat: async (playerIndex, discussionContext) => {
     const state = get();
     const player = state.players[playerIndex];
     if (player.isHuman) return;
@@ -142,22 +193,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       personality,
       nightLog,
       locale: state.locale,
+      discussionContext,
     };
 
-    try {
-      if (!state.providerConfig.apiKey) {
-        const fallback = getFallbackResponse(state.locale);
-        const message: ChatMessage = {
-          playerId: player.id,
-          playerName: player.name,
-          text: fallback,
-          timestamp: Date.now(),
-          isBuiltIn: false,
-        };
-        set({ chatMessages: [...get().chatMessages, message] });
-        return;
-      }
+    set({ thinkingPlayerId: playerIndex });
 
+    try {
       const messages = buildChatMessages(state as GameState, context);
       const provider = createProvider(state.providerConfig);
       const response = await provider.sendMessage(messages);
@@ -169,17 +210,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         timestamp: Date.now(),
         isBuiltIn: false,
       };
-      set({ chatMessages: [...get().chatMessages, message] });
-    } catch {
-      const fallback = getFallbackResponse(state.locale);
+      set({ chatMessages: [...get().chatMessages, message], thinkingPlayerId: null });
+    } catch (err) {
+      const errorText = err instanceof Error ? err.message : 'Unknown error';
       const message: ChatMessage = {
-        playerId: player.id,
-        playerName: player.name,
-        text: fallback,
+        playerId: -1,
+        playerName: 'System',
+        text: `⚠ ${player.name} API error: ${errorText}`,
         timestamp: Date.now(),
         isBuiltIn: false,
       };
-      set({ chatMessages: [...get().chatMessages, message] });
+      set({ chatMessages: [...get().chatMessages, message], thinkingPlayerId: null });
     }
   },
 
@@ -187,17 +228,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     set({ isProcessing: true });
 
-    const aiPlayers = state.players.filter((p) => !p.isHuman);
-    // Each AI speaks once in random order
-    const shuffled = [...aiPlayers].sort(() => Math.random() - 0.5);
+    const order = state.speakingOrder;
+    const startIdx = state.currentSpeakerIndex;
 
-    for (const player of shuffled) {
-      await get().triggerAIChat(player.id);
-      // Small delay between messages for UX
+    for (let i = startIdx; i < order.length; i++) {
+      const playerId = order[i];
+      const player = state.players.find((p) => p.id === playerId);
+      if (!player) continue;
+
+      if (player.isHuman) {
+        set({ currentSpeakerIndex: i, isProcessing: false });
+        return;
+      }
+
+      set({ currentSpeakerIndex: i });
+      await get().triggerAIChat(player.id, {
+        speakingPosition: i,
+        totalSpeakers: order.length,
+      });
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    set({ isProcessing: false });
+    set({
+      currentSpeakerIndex: order.length,
+      isProcessing: false,
+    });
   },
 
   proceedToVote: () => set({ phase: 'vote' }),
@@ -216,37 +271,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
     for (const player of state.players) {
       if (player.isHuman) continue;
 
-      if (state.providerConfig.apiKey) {
-        const personalityIdx = player.id - 1;
-        const personality = state.aiPersonalities[personalityIdx];
-        const nightLog = state.nightActions.find(
-          (log) => log.actorIndex === player.id
-        ) || null;
+      const personalityIdx = player.id - 1;
+      const personality = state.aiPersonalities[personalityIdx];
+      const nightLog = state.nightActions.find(
+        (log) => log.actorIndex === player.id
+      ) || null;
 
-        try {
-          const messages = buildVoteChatMessages(state as GameState, {
-            playerIndex: player.id,
-            personality,
-            nightLog,
-            locale: state.locale,
-          });
-          const provider = createProvider(state.providerConfig);
-          const response = await provider.sendMessage(messages);
-          const playerNames = state.players
-            .filter((p) => p.id !== player.id)
-            .map((p) => p.name);
-          const votedName = parseVoteResponse(response, playerNames);
-          const votedPlayer = state.players.find((p) => p.name === votedName);
+      try {
+        const messages = buildVoteChatMessages(state as GameState, {
+          playerIndex: player.id,
+          personality,
+          nightLog,
+          locale: state.locale,
+        });
+        const provider = createProvider(state.providerConfig);
+        const response = await provider.sendMessage(messages);
+        const playerNames = state.players
+          .filter((p) => p.id !== player.id)
+          .map((p) => p.name);
+        const votedName = parseVoteResponse(response, playerNames);
+        const votedPlayer = state.players.find((p) => p.name === votedName);
 
-          if (votedPlayer) {
-            newVotes[player.id] = votedPlayer.id;
-          } else {
-            newVotes[player.id] = generateAIVote(state as GameState, player.id);
-          }
-        } catch {
+        if (votedPlayer) {
+          newVotes[player.id] = votedPlayer.id;
+        } else {
           newVotes[player.id] = generateAIVote(state as GameState, player.id);
         }
-      } else {
+      } catch {
         newVotes[player.id] = generateAIVote(state as GameState, player.id);
       }
     }
@@ -283,6 +334,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isProcessing: false,
       humanNightAction: null,
       nightRevealed: null,
+      speakingOrder: [],
+      currentSpeakerIndex: 0,
+      discussionRound: 0,
+      thinkingPlayerId: null,
     });
   },
 
