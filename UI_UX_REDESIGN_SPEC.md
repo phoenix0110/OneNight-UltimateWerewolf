@@ -173,7 +173,125 @@ Keywords:
 
 ## 5. Information Architecture Refactor
 
-## 5.1 Target Structure
+## 5.1 UX Flow Principles
+
+The redesign must improve not only layout and visuals, but also the end-to-end user flow.
+
+### Core UX rules
+1. The user must always know:
+   - where they are
+   - what they should do next
+   - what information is already known
+   - what is still uncertain
+2. Every phase must reduce ambiguity in interaction, while preserving ambiguity in game deduction.
+3. UI confusion and game confusion are not the same thing.
+   - deduction uncertainty is good
+   - interface uncertainty is bad
+4. The player should never have to ask:
+   - "Can I click this?"
+   - "Is it my turn?"
+   - "Did my action lock in?"
+   - "Why am I waiting?"
+
+## 5.2 Global UX Flow
+
+### Flow A: First-time player
+Landing → Start Game → Setup → Role Reveal → Night → Day → Vote → Result → Replay / Exit
+
+### Flow B: Returning player
+Landing → Start Game → Setup (light adjustment) → Play loop
+
+### Flow C: Settings flow
+Landing / Game → Settings → Save → Return to prior context
+
+## 5.3 Phase-by-Phase UX Goals
+
+### Landing
+Goal: understand the fantasy and start fast.
+
+Success criteria:
+- user understands what kind of game this is within 5 seconds
+- primary CTA is obvious
+- secondary actions do not steal focus
+
+### Setup
+Goal: configure one valid match with low cognitive load.
+
+Success criteria:
+- user understands role count requirements
+- user can scan selected roles easily
+- invalid configuration has explicit explanation
+
+### Role Reveal
+Goal: internalize role identity before action begins.
+
+Success criteria:
+- role name is unmistakable
+- role ability is summarized in one sentence
+- next step is obvious
+
+### Night
+Goal: perform a secret action with confidence.
+
+Success criteria:
+- role instruction is clear
+- available targets are clear
+- selected targets are clear
+- confirmation feels locked and final
+
+### Day
+Goal: follow and participate in deduction discussion without losing state awareness.
+
+Success criteria:
+- current speaker is obvious
+- round state is obvious
+- AI thinking state is obvious
+- the human knows when they can speak
+- proceeding to vote feels deliberate
+
+### Vote
+Goal: make a final, high-stakes decision.
+
+Success criteria:
+- who can be voted is obvious
+- selected target is obvious
+- voting lock-in is obvious
+
+### Result
+Goal: understand what happened and why.
+
+Success criteria:
+- winning faction is obvious
+- user win/lose is obvious
+- identity transitions are easy to scan
+- result explanation is understandable
+
+## 5.4 Critical UX States to Support
+
+All redesigned pages must explicitly support these states where relevant:
+- default
+- hover
+- selected
+- active
+- disabled
+- loading
+- processing
+- waiting for AI
+- waiting for other votes
+- revealed
+- dead
+- round complete
+- error / retry
+
+## 5.5 UX Risks in Current Product
+
+1. Setup mixes required and optional decisions without progression.
+2. Night action confirmation is too close to ordinary button clicking.
+3. Day discussion overloads the player with too many equal-weight UI regions.
+4. Vote phase lacks emotional escalation.
+5. Result phase does not sufficiently support recap thinking.
+
+## 5.6 Target Structure
 
 All gameplay screens should be structured as:
 
@@ -741,7 +859,106 @@ These components should be standardized or created before/while page refactors p
 
 ---
 
-## 10. Implementation Order
+## 10. Page-Level UX Flow Details
+
+## 10.1 Landing UX Flow
+
+1. User lands on page
+2. User immediately sees game fantasy + primary CTA
+3. User either:
+   - starts game
+   - checks how the game works
+   - changes language
+   - logs in
+
+Rules:
+- do not make pricing/subscription the first decision
+- the first decision should be gameplay-oriented
+
+## 10.2 Setup UX Flow
+
+1. Enter player identity
+2. Choose player count
+3. Configure roles
+4. Review match summary
+5. Optionally set AI provider / API key
+6. Start game
+
+Rules:
+- when invalid, explain why start is blocked
+- summary should update live
+- role configuration should feel compositional, not technical
+
+## 10.3 Role Reveal UX Flow
+
+1. Show role reveal card
+2. Show short role instruction
+3. Wait for explicit continue
+4. Enter night phase
+
+Rules:
+- do not bury role ability in small text
+- this moment must feel ceremonial
+
+## 10.4 Night UX Flow
+
+1. Show role and role-specific task
+2. Present only valid targets/actions
+3. Let player select target(s)
+4. Show current selection summary
+5. Confirm action
+6. Show reveal / lock state
+7. Proceed to day
+
+Rules:
+- never show irrelevant target UI
+- confirmation must clearly separate pre-confirmation and post-confirmation
+- if role has no action, still show a valid waiting-state explanation
+
+## 10.5 Day UX Flow
+
+1. Enter day scene
+2. Show discussion order and current speaker
+3. Stream AI discussion step by step
+4. If it is the human turn, unlock input area and quick speech
+5. If round completes, show round-complete state
+6. Allow next round or proceed to vote
+
+Rules:
+- the human should never wonder if it is their turn
+- AI thinking should be tied to a specific player
+- next round and proceed to vote should not visually compete at the wrong time
+- scene immersion must not hide discussion clarity
+
+## 10.6 Vote UX Flow
+
+1. Enter vote phase
+2. Show eligible targets
+3. User selects one target
+4. UI reflects locked choice
+5. User confirms vote
+6. Wait for other votes
+7. Transition to resolution
+
+Rules:
+- selection and confirmation must be separate moments
+- after lock-in, user must understand they are waiting for final tally
+
+## 10.7 Result UX Flow
+
+1. Show win/lose outcome
+2. Show winning faction
+3. Show why result happened
+4. Show killed players
+5. Show full role recap
+6. Show center cards
+7. Offer replay or exit
+
+Rules:
+- reveal the explanation before burying the user in long lists
+- the user should be able to scan the entire resolution quickly
+
+## 11. Implementation Order
 
 ### Phase 1
 - build shared visual primitives
