@@ -958,7 +958,175 @@ Rules:
 - reveal the explanation before burying the user in long lists
 - the user should be able to scan the entire resolution quickly
 
-## 11. Implementation Order
+## 11. Day Phase Deep Spec (Final Enhancement Layer)
+
+This section is the most implementation-critical addition in the current redesign. The Day phase is the first screen that must fully express the Star-Office-UI-inspired design logic.
+
+## 11.1 Day Phase Design Goal
+
+The Day phase must feel like:
+- a village square discussion scene
+- a social deduction control center
+- a readable tactical interface on top of a living pixel space
+
+It must not feel like:
+- a generic chat screen
+- a long vertical list with controls
+- a panel-first tool UI
+
+## 11.2 Scene Layout Model
+
+### Spatial concept
+The village square should be treated as a top-level stage.
+
+Recommended visual zones:
+1. **Top HUD zone**
+   - phase header
+   - round index
+   - current speaker
+2. **Center discussion zone**
+   - symbolic firepit / discussion marker / village center
+3. **Player ring zone**
+   - players spatially arranged around the center
+4. **Right or lower overlay zone**
+   - discussion log panel
+5. **Bottom control zone**
+   - input area / quick speech / next round / vote
+
+### Layout rule
+- Scene is primary.
+- Overlays are secondary.
+- Overlays must not completely flatten the space.
+
+## 11.3 Required Day Components
+
+### A. `DaySceneFrame`
+Responsibilities:
+- render village-square background
+- provide layout container for spatial player positions
+- support responsive fallback on smaller screens
+
+### B. `DiscussionCenterMarker`
+Responsibilities:
+- visually anchor the scene center
+- give the player a spatial reference point
+- reinforce that discussion is happening in a shared place
+
+### C. `DiscussionAvatarNode`
+Responsibilities:
+- render each player in a stable spatial slot
+- support states:
+  - default
+  - current speaker
+  - already spoke
+  - human player
+  - thinking
+  - dead/resolved (future-safe)
+
+### D. `PhaseHUD`
+Responsibilities:
+- show phase name
+- show round number
+- show current speaker
+- show “your turn” vs “AI speaking”
+
+### E. `DiscussionLogPanel`
+Responsibilities:
+- display messages clearly
+- separate message types visually
+- preserve readability over atmosphere
+
+### F. `QuickSpeechDrawer`
+Responsibilities:
+- expose tactical preset lines
+- remain subordinate to normal input
+- appear only when relevant
+
+### G. `DiscussionActionFooter`
+Responsibilities:
+- contain next round / proceed to vote actions
+- visually separate routine progression from final escalation
+
+## 11.4 Day Interaction State Spec
+
+### Current speaker state
+Must include:
+- stronger outline or glow
+- scale increase
+- name echoed in HUD
+- optional animated pulse
+
+### AI thinking state
+Must include:
+- attach thinking indicator to the currently thinking player
+- show matching status in log panel
+- do not show detached anonymous loading dots
+
+### Human turn state
+Must include:
+- input panel visually unlocked
+- quick speech accessible
+- clear banner or label: “Your turn”
+- send CTA visually promoted
+
+### Round complete state
+Must include:
+- explicit “round complete” indicator
+- next round button enabled
+- proceed to vote button available
+- if both are shown, vote action should still feel more consequential
+
+### Non-human turn state
+Must include:
+- input visually disabled or hidden
+- current actor clearly indicated
+- no ambiguous partially-active input controls
+
+## 11.5 Message Styling Rules
+
+Message types must be visually distinct:
+
+1. **Human player message**
+   - cyan or player-linked accent
+2. **AI player message**
+   - orange or neutral warm accent
+3. **System message**
+   - muted, structurally separate
+4. **AI thinking message**
+   - subdued and temporary
+
+Rules:
+- sender name must always be easy to scan
+- message body must use readable body text sizing
+- do not use tiny pixel text for core conversation content
+
+## 11.6 Mobile Behavior
+
+Day phase must still work on mobile.
+
+### Mobile adaptation rule
+- if spatial ring becomes too cramped, compress to a semi-arc or horizontal speaker strip above the discussion panel
+- preserve current speaker prominence
+- keep discussion log and input usable without precision tapping
+
+### Mobile priorities
+1. current speaker visibility
+2. readable log
+3. accessible input
+4. usable action footer
+5. decorative scene second
+
+## 11.7 Day Phase Acceptance Criteria
+
+The Day redesign passes only if:
+1. the current speaker is identifiable in less than 1 second
+2. the player can tell whether it is their turn in less than 1 second
+3. AI thinking is visually tied to one specific actor
+4. the discussion area no longer feels like a generic chat box
+5. the scene adds immersion without hurting readability
+6. proceeding to vote feels like a phase transition, not a random button tap
+
+## 12. Implementation Order
 
 ### Phase 1
 - build shared visual primitives
