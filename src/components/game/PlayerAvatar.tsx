@@ -31,16 +31,16 @@ const ROLE_EMOJI: Record<RoleId, string> = {
   doppelganger: '🪞',
 };
 
-const AVATAR_COLORS = [
-  'bg-pixel-blue',
-  'bg-pixel-red',
-  'bg-pixel-green',
-  'bg-pixel-orange',
-  'bg-pixel-purple',
-  'bg-pixel-teal',
-  'bg-pixel-navy',
-  'bg-pixel-sky',
+const BG_COLORS = [
+  '#1d4ed8', '#be123c', '#047857', '#b45309',
+  '#7e22ce', '#0f766e', '#4338ca', '#0369a1',
 ];
+
+const SIZE_MAP = {
+  sm: { box: 48, emoji: 20 },
+  md: { box: 64, emoji: 26 },
+  lg: { box: 80, emoji: 32 },
+};
 
 export default function PlayerAvatar({
   name,
@@ -55,73 +55,83 @@ export default function PlayerAvatar({
   voteCount,
 }: PlayerAvatarProps) {
   const t = useTranslations();
-
-  const sizeClasses = {
-    sm: 'w-14 h-14',
-    md: 'w-18 h-18',
-    lg: 'w-22 h-22',
-  };
-
+  const dims = SIZE_MAP[size];
   const nameHash = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const colorClass = AVATAR_COLORS[nameHash % AVATAR_COLORS.length];
+  const bgColor = BG_COLORS[nameHash % BG_COLORS.length];
 
   return (
     <div
-      className={`flex flex-col items-center gap-1 ${onClick ? 'cursor-pointer' : ''}`}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: onClick ? 'pointer' : undefined }}
       onClick={onClick}
     >
-      {/* Speech bubble */}
       {speechBubble && (
-        <div className="pixel-box p-1.5 rounded text-[7px] max-w-[120px] text-center mb-1 animate-fadeInUp">
+        <div
+          className="panel"
+          style={{ padding: 8, borderRadius: 8, fontSize: 12, maxWidth: 140, textAlign: 'center', color: 'var(--text-secondary)' }}
+        >
           {speechBubble}
         </div>
       )}
 
-      {/* Avatar */}
       <div
-        className={`
-          ${sizeClasses[size]} rounded-lg flex items-center justify-center relative
-          ${colorClass} ${isDead ? 'opacity-40 grayscale' : ''}
-          ${isSelected ? 'ring-2 ring-pixel-yellow animate-glow' : ''}
-          ${isHuman ? 'ring-2 ring-pixel-cyan' : ''}
-          transition-all
-        `}
-        style={{ imageRendering: 'pixelated' }}
+        style={{
+          width: dims.box,
+          height: dims.box,
+          borderRadius: 12,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          background: bgColor,
+          opacity: isDead ? 0.3 : 1,
+          filter: isDead ? 'grayscale(1)' : undefined,
+          boxShadow: isSelected
+            ? '0 0 0 2px var(--accent-moon), 0 0 12px 4px rgba(246,211,101,0.4)'
+            : isHuman
+              ? '0 0 0 2px var(--accent-cyan)'
+              : undefined,
+          transition: 'all 0.2s',
+        }}
       >
-        {/* Pixel face */}
-        <div className="text-center">
-          <div className="text-lg leading-none">
-            {showRole && role ? ROLE_EMOJI[role] : '😐'}
-          </div>
-        </div>
+        <span style={{ fontSize: dims.emoji, lineHeight: 1 }}>
+          {showRole && role ? ROLE_EMOJI[role] : '😐'}
+        </span>
 
         {isDead && (
-          <div className="absolute inset-0 flex items-center justify-center text-2xl">
+          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
             ❌
-          </div>
+          </span>
         )}
 
         {voteCount !== undefined && voteCount > 0 && (
-          <div className="absolute -top-2 -right-2 bg-pixel-red text-pixel-white text-[8px] rounded-full w-5 h-5 flex items-center justify-center">
+          <span
+            style={{
+              position: 'absolute', top: -8, right: -8,
+              background: 'var(--accent-red)', color: '#fff',
+              fontSize: 11, fontWeight: 700, borderRadius: '50%',
+              width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
             {voteCount}
-          </div>
+          </span>
         )}
       </div>
 
-      {/* Name */}
-      <div
-        className={`text-[8px] text-center max-w-[60px] truncate ${
-          isHuman ? 'text-pixel-cyan' : 'text-pixel-light'
-        }`}
+      <span
+        style={{
+          fontSize: 12, textAlign: 'center', maxWidth: 80,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontWeight: 500,
+          color: isHuman ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+        }}
       >
         {name}
-      </div>
+      </span>
 
-      {/* Role label */}
       {showRole && role && (
-        <div className="text-[7px] text-pixel-yellow text-center">
+        <span style={{ fontSize: 11, color: 'var(--accent-moon)', textAlign: 'center' }}>
           {t(`roles.${role}`)}
-        </div>
+        </span>
       )}
     </div>
   );

@@ -36,8 +36,7 @@ export interface ChatMessage {
 export interface GameConfig {
   playerCount: number;
   playerName: string;
-  roles: RoleId[]; // exactly playerCount + 3
-  aiProvider: string;
+  roles: RoleId[]; // exactly playerCount + CENTER_CARD_COUNT
 }
 
 export interface GameState {

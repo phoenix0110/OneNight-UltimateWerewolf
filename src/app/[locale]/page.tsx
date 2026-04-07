@@ -1,10 +1,23 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { useParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import LanguageToggle from '@/components/ui/LanguageToggle';
+
+const FEATURES = [
+  { icon: '🤖', titleKey: 'landing.feature1Title', descKey: 'landing.feature1Desc' },
+  { icon: '🎨', titleKey: 'landing.feature2Title', descKey: 'landing.feature2Desc' },
+  { icon: '🃏', titleKey: 'landing.feature3Title', descKey: 'landing.feature3Desc' },
+] as const;
+
+const PHASES = [
+  { icon: '⚙️', label: 'Setup' },
+  { icon: '🌙', label: 'Night' },
+  { icon: '☀️', label: 'Day' },
+  { icon: '🗳️', label: 'Vote' },
+  { icon: '🏆', label: 'Result' },
+] as const;
 
 export default function LandingPage() {
   const t = useTranslations();
@@ -14,117 +27,125 @@ export default function LandingPage() {
   const { user, signInWithGoogle, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between p-4">
-        <div className="text-pixel-yellow pixel-text text-xs sm:text-sm">
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' }}>
+      {/* ── Header ── */}
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+        <span className="font-pixel text-glow-moon" style={{ color: 'var(--accent-moon)', fontSize: 13 }}>
           {t('common.appName')}
-        </div>
-        <div className="flex items-center gap-3">
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <LanguageToggle />
           {user ? (
-            <button
-              onClick={signOut}
-              className="pixel-btn px-2 py-1 text-[9px]"
-              title={user.displayName || ''}
-            >
+            <button onClick={signOut} className="btn btn-ghost" style={{ fontSize: 12 }} title={user.displayName || ''}>
               {user.displayName?.split(' ')[0] || t('common.logout')}
             </button>
           ) : (
-            <button
-              onClick={signInWithGoogle}
-              className="pixel-btn px-2 py-1 text-[9px]"
-            >
+            <button onClick={signInWithGoogle} className="btn btn-ghost" style={{ fontSize: 12 }}>
               {t('common.login')}
             </button>
           )}
-          <button
-            onClick={() => router.push(`/${locale}/game`)}
-            className="pixel-btn pixel-btn-success px-3 py-1.5 text-[10px]"
-          >
-            {t('common.play')}
-          </button>
         </div>
       </header>
 
-      {/* Hero */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 text-center">
-        <div className="mb-8">
-          {/* Pixel art moon and werewolf scene */}
-          <div className="relative w-48 h-48 mx-auto mb-6">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-24 h-24 rounded-full bg-pixel-yellow opacity-80 animate-glow" />
+      {/* ── Hero ── */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px', textAlign: 'center' }}>
+        <div style={{ marginBottom: 48, maxWidth: 520 }}>
+          {/* Moon + Werewolf scene */}
+          <div style={{ position: 'relative', width: 224, height: 224, margin: '0 auto 32px' }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 112, height: 112, borderRadius: '50%', background: 'rgba(246,211,101,0.2)', filter: 'blur(24px)' }} />
             </div>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-6xl animate-float">
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="anim-pulse-soft" style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(246,211,101,0.3)' }} />
+            </div>
+            <div className="anim-float" style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', fontSize: 72 }}>
               🐺
             </div>
+            <div className="anim-blink" style={{ position: 'absolute', top: 16, left: 32, fontSize: 12, color: 'rgba(246,211,101,0.6)' }}>✦</div>
+            <div className="anim-blink" style={{ position: 'absolute', top: 40, right: 40, fontSize: 14, color: 'rgba(89,208,255,0.4)', animationDelay: '1s' }}>✦</div>
+            <div className="anim-blink" style={{ position: 'absolute', top: 24, right: 80, fontSize: 12, color: 'rgba(246,211,101,0.4)', animationDelay: '2s' }}>✧</div>
           </div>
 
-          <h1 className="text-xl sm:text-3xl pixel-text text-pixel-yellow mb-4">
+          <h1 className="font-pixel text-glow-moon" style={{ fontSize: 26, color: 'var(--accent-moon)', marginBottom: 16, lineHeight: 1.4 }}>
             {t('landing.heroTitle')}
           </h1>
-          <p className="text-pixel-light text-[10px] sm:text-xs max-w-md mx-auto mb-8">
+          <p style={{ color: 'var(--text-secondary)', fontSize: 15, maxWidth: 400, margin: '0 auto 32px', lineHeight: 1.6 }}>
             {t('landing.heroSubtitle')}
           </p>
 
           <button
             onClick={() => router.push(`/${locale}/game`)}
-            className="pixel-btn pixel-btn-success px-8 py-3 text-xs sm:text-sm"
+            className="btn btn-success"
+            style={{ fontSize: 16, padding: '12px 40px', minHeight: 52, boxShadow: '0 4px 20px rgba(34,197,94,0.3)' }}
           >
             ▶ {t('common.play')}
           </button>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-12">
-          {[
-            { icon: '🤖', title: t('landing.feature1Title'), desc: t('landing.feature1Desc') },
-            { icon: '🎨', title: t('landing.feature2Title'), desc: t('landing.feature2Desc') },
-            { icon: '🃏', title: t('landing.feature3Title'), desc: t('landing.feature3Desc') },
-          ].map((f) => (
-            <div key={f.title} className="pixel-box p-4 rounded">
-              <div className="text-2xl mb-2">{f.icon}</div>
-              <div className="text-pixel-cyan text-[10px] mb-1">{f.title}</div>
-              <div className="text-pixel-light text-[8px]">{f.desc}</div>
+        {/* ── Feature cards ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 640, width: '100%', margin: '0 auto 48px' }}>
+          {FEATURES.map((f) => (
+            <div key={f.titleKey} className="panel" style={{ padding: 20, textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
+              <div style={{ color: 'var(--accent-cyan)', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+                {t(f.titleKey)}
+              </div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.5 }}>
+                {t(f.descKey)}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Subscription Section */}
-        <section className="w-full max-w-xl mx-auto mb-12">
-          <h2 className="text-sm pixel-text text-pixel-orange mb-4">
+        {/* ── Phase timeline ── */}
+        <div style={{ width: '100%', maxWidth: 480, margin: '0 auto 48px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
+            {PHASES.map((phase, i) => (
+              <div key={phase.label} style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontSize: 20, marginBottom: 4 }}>{phase.icon}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{phase.label}</span>
+                </div>
+                {i < PHASES.length - 1 && (
+                  <div style={{ width: 32, height: 1, background: 'var(--border-default)', margin: '0 6px', marginTop: -12 }} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Subscription (de-prioritized) ── */}
+        <section style={{ width: '100%', maxWidth: 520, margin: '0 auto 48px' }}>
+          <h2 className="font-pixel" style={{ fontSize: 13, color: 'var(--accent-orange)', marginBottom: 12 }}>
             {t('landing.subscribeTitle')}
           </h2>
-          <p className="text-pixel-light text-[9px] mb-6">
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
             {t('landing.subscribeDesc')}
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {/* Free */}
-            <div className="pixel-box p-4 rounded">
-              <div className="text-pixel-lime text-xs mb-2">{t('common.free')}</div>
-              <div className="text-pixel-yellow text-lg mb-2">$0</div>
-              <div className="text-pixel-light text-[8px] mb-4">
+            <div className="panel" style={{ padding: 20 }}>
+              <div style={{ color: 'var(--accent-lime)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t('common.free')}</div>
+              <div style={{ color: 'var(--accent-moon)', fontSize: 24, fontWeight: 700, marginBottom: 8 }}>$0</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
                 {t('landing.freeFeatures')}
               </div>
-              <button
-                onClick={() => router.push(`/${locale}/game`)}
-                className="pixel-btn w-full py-2 text-[10px]"
-              >
+              <button onClick={() => router.push(`/${locale}/game`)} className="btn btn-secondary" style={{ width: '100%', fontSize: 13 }}>
                 {t('landing.startFree')}
               </button>
             </div>
 
             {/* Premium */}
-            <div className="pixel-box p-4 rounded border-2 border-pixel-yellow">
-              <div className="text-pixel-yellow text-xs mb-2">{t('common.premium')}</div>
-              <div className="text-pixel-yellow text-lg mb-2">
+            <div className="panel" style={{ padding: 20, borderColor: 'rgba(246,211,101,0.4)', boxShadow: '0 0 0 1px rgba(246,211,101,0.2)' }}>
+              <div style={{ color: 'var(--accent-moon)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t('common.premium')}</div>
+              <div style={{ color: 'var(--accent-moon)', fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
                 {t('landing.premiumPrice')}
               </div>
-              <div className="text-pixel-light text-[8px] mb-4">
+              <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
                 {t('landing.premiumFeatures')}
               </div>
-              <button className="pixel-btn pixel-btn-success w-full py-2 text-[10px]">
+              <button className="btn btn-success" style={{ width: '100%', fontSize: 13 }}>
                 {t('common.subscribe')}
               </button>
             </div>
@@ -132,22 +153,24 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="p-4 text-center">
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={() => router.push(`/${locale}/achievements`)}
-            className="text-pixel-light text-[9px] hover:text-pixel-cyan"
-          >
-            {t('common.achievements')}
-          </button>
-          <button
-            onClick={() => router.push(`/${locale}/settings`)}
-            className="text-pixel-light text-[9px] hover:text-pixel-cyan"
-          >
-            {t('common.settings')}
-          </button>
-        </div>
+      {/* ── Footer ── */}
+      <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 16 }}>
+        <button
+          onClick={() => router.push(`/${locale}/achievements`)}
+          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', transition: 'color 0.15s' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-cyan)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          {t('common.achievements')}
+        </button>
+        <button
+          onClick={() => router.push(`/${locale}/settings`)}
+          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', transition: 'color 0.15s' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-cyan)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          {t('common.settings')}
+        </button>
       </footer>
     </div>
   );

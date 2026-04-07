@@ -17,7 +17,8 @@ export default function LanguageToggle() {
   return (
     <button
       onClick={toggleLocale}
-      className="pixel-btn px-2 py-1 text-[9px]"
+      className="btn btn-ghost"
+      style={{ fontSize: 12, minHeight: 32, padding: '4px 10px' }}
       title={currentLocale === 'en' ? '切换中文' : 'Switch to English'}
     >
       {currentLocale === 'en' ? '中文' : 'EN'}

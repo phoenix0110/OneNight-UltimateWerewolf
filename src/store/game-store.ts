@@ -4,7 +4,7 @@ import { buildChatMessages, buildVoteChatMessages, parseVoteResponse } from '@/a
 import { BuiltInSpeech, fillTemplate, getBuiltInSpeeches } from '@/ai/built-in-speeches';
 import { AIPersonality, generatePersonalities } from '@/ai/personality';
 import { DiscussionContext } from '@/ai/prompts';
-import { createProvider, BUILT_IN_PROVIDERS, ProviderConfig } from '@/ai/providers';
+import { sendAIMessage } from '@/ai/providers';
 import { ChatMessage, createInitialState, GameConfig, GameState } from '@/engine/game-state';
 import { NightActionChoice, processAllNightActions, resolveNightAction } from '@/engine/night-actions';
 import { RoleId } from '@/engine/roles';
@@ -13,7 +13,6 @@ import { determineWinners, WinResult } from '@/engine/win-conditions';
 
 interface GameStore extends GameState {
   aiPersonalities: AIPersonality[];
-  providerConfig: ProviderConfig;
   locale: string;
   winResult: WinResult | null;
   isProcessing: boolean;
@@ -22,7 +21,6 @@ interface GameStore extends GameState {
   thinkingPlayerId: number | null;
 
   setLocale: (locale: string) => void;
-  setProvider: (config: ProviderConfig) => void;
   startGame: (config: GameConfig) => void;
   proceedToNight: () => void;
   setHumanNightAction: (action: NightActionChoice) => void;
@@ -40,11 +38,6 @@ interface GameStore extends GameState {
   getBuiltInSpeeches: () => BuiltInSpeech[];
   getFilledSpeech: (speech: BuiltInSpeech) => string;
 }
-
-const DEFAULT_PROVIDER: ProviderConfig = {
-  ...BUILT_IN_PROVIDERS[0],
-  apiKey: '',
-};
 
 function generateSpeakingOrder(players: { id: number; isHuman: boolean }[]): number[] {
   const ids = players.map((p) => p.id);
@@ -73,12 +66,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   killedPlayerIds: [],
   winners: [],
   humanPlayerIndex: 0,
-  config: { playerCount: 5, playerName: 'You', roles: [], aiProvider: 'openai' },
+  config: { playerCount: 5, playerName: 'You', roles: [] },
   speakingOrder: [],
   currentSpeakerIndex: 0,
   discussionRound: 0,
   aiPersonalities: [],
-  providerConfig: DEFAULT_PROVIDER,
   locale: 'en',
   winResult: null,
   isProcessing: false,
@@ -87,8 +79,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   thinkingPlayerId: null,
 
   setLocale: (locale) => set({ locale }),
-
-  setProvider: (config) => set({ providerConfig: config }),
 
   startGame: (config) => {
     const state = createInitialState(config);
@@ -200,8 +190,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     try {
       const messages = buildChatMessages(state as GameState, context);
-      const provider = createProvider(state.providerConfig);
-      const response = await provider.sendMessage(messages);
+      const response = await sendAIMessage(messages);
 
       const message: ChatMessage = {
         playerId: player.id,
@@ -284,8 +273,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           nightLog,
           locale: state.locale,
         });
-        const provider = createProvider(state.providerConfig);
-        const response = await provider.sendMessage(messages);
+        const response = await sendAIMessage(messages);
         const playerNames = state.players
           .filter((p) => p.id !== player.id)
           .map((p) => p.name);
@@ -345,7 +333,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const humanPlayer = state.players[state.humanPlayerIndex];
     if (!humanPlayer) return [];
-    return getBuiltInSpeeches(humanPlayer.originalRole);
+    return getBuiltInSpeeches(humanPlayer.originalRole, state.locale);
   },
 
   getFilledSpeech: (speech) => {

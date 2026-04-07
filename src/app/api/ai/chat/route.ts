@@ -2,31 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 
 interface ChatRequest {
   messages: { role: string; content: string }[];
-  provider: {
-    baseUrl: string;
-    model: string;
-    apiKey: string;
-  };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    const { messages, provider } = body;
+    const { messages } = body;
 
-    const rawApiKey = (provider.apiKey || process.env.DEFAULT_AI_API_KEY || '').trim();
-    const apiKey = rawApiKey.replace(/^Bearer\s+/i, '').trim();
+    const apiKey = (process.env.AI_API_KEY || '').trim();
+    const baseUrl = (process.env.AI_BASE_URL || 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
+    const model = process.env.AI_MODEL || 'kimi-k2.5';
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'No API key provided' },
-        { status: 400 }
+        { error: 'AI_API_KEY not configured in .env' },
+        { status: 500 }
       );
     }
 
-    const isKimiK25 = provider.model.startsWith('kimi-k2.5');
+    const isKimiK25 = model.startsWith('kimi-k2.5');
     const requestBody: Record<string, unknown> = {
-      model: provider.model,
+      model,
       messages,
       max_tokens: isKimiK25 ? 300 : 200,
     };
@@ -36,9 +32,8 @@ export async function POST(request: NextRequest) {
       requestBody.temperature = 0.8;
     }
 
-    const normalizedBaseUrl = provider.baseUrl.replace(/\/+$/, '');
     const response = await fetch(
-      `${normalizedBaseUrl}/chat/completions`,
+      `${baseUrl}/chat/completions`,
       {
         method: 'POST',
         headers: {

@@ -45,7 +45,10 @@
     "startGame": "开始游戏",
     "aiProvider": "AI 供应商",
     "apiKey": "API 密钥（可选）",
-    "apiKeyHint": "需要 API 密钥才能让 AI 在讨论中发言"
+    "apiKeyHint": "需要 API 密钥才能让 AI 在讨论中发言",
+    "namePlaceholder": "输入你的名字...",
+    "nameRequired": "请输入你的名字",
+    "rolesRemaining": "还需选择 {count} 个角色"
   },
   "roles": {
     "werewolf": "狼人",
@@ -117,7 +120,21 @@
     "backToMenu": "返回主页",
     "votes": "票",
     "centerCards": "底牌",
-    "youAre": "你的身份是"
+    "youAre": "你的身份是",
+    "waitNightActions": "请耐心等待，夜间行动正在进行中...",
+    "villageSquare": "村庄广场",
+    "target": "目标",
+    "votingFor": "投票给：",
+    "you": "（你）",
+    "teamWerewolf": "🐺 狼人阵营",
+    "teamVillage": "🏘️ 好人阵营",
+    "teamSolo": "🪶 独立阵营",
+    "teamUnknown": "🪞 取决于复制的角色...",
+    "reasonNoWwNobodyDied": "场上没有狼人，也没有人被淘汰。好人阵营获胜！",
+    "reasonNoWwSomeoneDied": "场上没有狼人，但有人被淘汰了。狼人阵营获胜！",
+    "reasonWwKilled": "狼人被淘汰了！好人阵营获胜！",
+    "reasonNoWwKilled": "没有狼人被淘汰。狼人阵营获胜！",
+    "reasonTannerAlsoWins": "皮匠也因为被淘汰而获胜！"
   },
   "achievements": {
     "title": "成就系统",

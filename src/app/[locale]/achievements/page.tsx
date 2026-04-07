@@ -16,9 +16,7 @@ export default function AchievementsPage() {
   const { user, signInWithGoogle, loading } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [leaderboard, setLeaderboard] = useState<
-    { displayName: string; rankPoints: number; rank: string }[]
-  >([]);
+  const [leaderboard, setLeaderboard] = useState<{ displayName: string; rankPoints: number; rank: string }[]>([]);
   const [activeTab, setActiveTab] = useState<'stats' | 'leaderboard'>('stats');
 
   useEffect(() => {
@@ -32,147 +30,105 @@ export default function AchievementsPage() {
   const progress = profile ? getRankProgress(profile.rankPoints) : 0;
 
   return (
-    <div className="min-h-screen flex flex-col p-4 max-w-lg mx-auto w-full">
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', maxWidth: 512, margin: '0 auto', width: '100%' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => router.push(`/${locale}`)}
-          className="pixel-btn px-2 py-1 text-[9px]"
-        >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+        <button onClick={() => router.push(`/${locale}`)} className="btn btn-ghost" style={{ fontSize: 13 }}>
           ← {t('common.back')}
         </button>
-        <h1 className="text-sm pixel-text text-pixel-yellow">
+        <h1 className="font-pixel text-glow-moon" style={{ fontSize: 15, color: 'var(--accent-moon)', margin: 0 }}>
           {t('achievements.title')}
         </h1>
         <LanguageToggle />
       </div>
 
       {!user && !loading ? (
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="pixel-box p-6 rounded text-center">
-            <div className="text-2xl mb-4">🔒</div>
-            <p className="text-[10px] text-pixel-light mb-4">
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="panel-raised" style={{ padding: 32, textAlign: 'center' }}>
+            <div style={{ fontSize: 28, marginBottom: 16 }}>🔒</div>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
               {t('achievements.loginRequired')}
             </p>
-            <button
-              onClick={signInWithGoogle}
-              className="pixel-btn pixel-btn-success px-6 py-2 text-[10px]"
-            >
+            <button onClick={signInWithGoogle} className="btn btn-success" style={{ fontSize: 14 }}>
               {t('common.loginWithGoogle')}
             </button>
           </div>
         </div>
       ) : loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-pixel-gray text-[10px] animate-blink">
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="anim-pulse-soft" style={{ color: 'var(--text-muted)', fontSize: 14 }}>
             {t('common.loading')}
           </div>
         </div>
       ) : (
-        <>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Rank Display */}
-          <div className="pixel-box p-4 rounded mb-4 text-center">
-            <div className="text-3xl mb-2">{rankInfo.emoji}</div>
-            <div
-              className="text-sm pixel-text mb-1"
-              style={{ color: rankInfo.color }}
-            >
+          <div className="panel-raised" style={{ padding: 24, textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>{rankInfo.emoji}</div>
+            <div className="font-pixel" style={{ fontSize: 16, marginBottom: 4, color: rankInfo.color }}>
               {t(rankInfo.nameKey)}
               {rankInfo.tier ? ` ${rankInfo.tier}` : ''}
             </div>
-            <div className="text-[9px] text-pixel-gray mb-3">
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 16 }}>
               {profile?.rankPoints || 0} pts
             </div>
 
             {/* Progress bar */}
-            <div className="w-full h-3 bg-pixel-dark rounded overflow-hidden">
+            <div style={{ width: '100%', height: 12, background: 'var(--bg-base)', borderRadius: 99, overflow: 'hidden' }}>
               <div
-                className="h-full transition-all duration-500"
                 style={{
-                  width: `${progress}%`,
-                  backgroundColor: rankInfo.color,
+                  height: '100%', borderRadius: 99, transition: 'width 0.5s',
+                  width: `${progress}%`, backgroundColor: rankInfo.color,
                 }}
               />
             </div>
-            <div className="text-[8px] text-pixel-gray mt-1">
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
               {progress}%
             </div>
           </div>
 
-          {/* Tab buttons */}
-          <div className="flex gap-2 mb-4">
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => setActiveTab('stats')}
-              className={`pixel-btn px-4 py-1 text-[9px] flex-1 ${
-                activeTab === 'stats' ? 'pixel-btn-success' : ''
-              }`}
+              className={`btn ${activeTab === 'stats' ? 'btn-success' : 'btn-secondary'}`}
+              style={{ flex: 1, fontSize: 14 }}
             >
               {t('achievements.stats')}
             </button>
             <button
               onClick={() => setActiveTab('leaderboard')}
-              className={`pixel-btn px-4 py-1 text-[9px] flex-1 ${
-                activeTab === 'leaderboard' ? 'pixel-btn-success' : ''
-              }`}
+              className={`btn ${activeTab === 'leaderboard' ? 'btn-success' : 'btn-secondary'}`}
+              style={{ flex: 1, fontSize: 14 }}
             >
               {t('achievements.leaderboard')}
             </button>
           </div>
 
           {activeTab === 'stats' ? (
-            /* Stats Grid */
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard
-                label={t('achievements.gamesPlayed')}
-                value={profile?.stats.gamesPlayed || 0}
-                color="text-pixel-cyan"
-              />
-              <StatCard
-                label={t('achievements.wins')}
-                value={profile?.stats.wins || 0}
-                color="text-pixel-lime"
-              />
-              <StatCard
-                label={t('achievements.losses')}
-                value={profile?.stats.losses || 0}
-                color="text-pixel-red"
-              />
-              <StatCard
-                label={t('achievements.winRate')}
-                value={`${profile?.stats.winRate || 0}%`}
-                color="text-pixel-yellow"
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <StatCard label={t('achievements.gamesPlayed')} value={profile?.stats.gamesPlayed || 0} color="var(--accent-cyan)" />
+              <StatCard label={t('achievements.wins')} value={profile?.stats.wins || 0} color="var(--accent-lime)" />
+              <StatCard label={t('achievements.losses')} value={profile?.stats.losses || 0} color="var(--accent-red)" />
+              <StatCard label={t('achievements.winRate')} value={`${profile?.stats.winRate || 0}%`} color="var(--accent-moon)" />
             </div>
           ) : (
-            /* Leaderboard */
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {leaderboard.length === 0 ? (
-                <div className="pixel-box p-4 rounded text-center">
-                  <div className="text-[10px] text-pixel-gray">
-                    {t('achievements.comingSoon')}
-                  </div>
+                <div className="panel" style={{ padding: 24, textAlign: 'center' }}>
+                  <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{t('achievements.comingSoon')}</span>
                 </div>
               ) : (
                 leaderboard.map((entry, i) => {
                   const entryRank = getRankInfo(entry.rank);
                   return (
-                    <div
-                      key={i}
-                      className="pixel-box p-2 rounded flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-pixel-yellow w-6">
-                          #{i + 1}
-                        </span>
-                        <span className="text-[9px]">{entryRank.emoji}</span>
-                        <span className="text-[10px] text-pixel-white">
-                          {entry.displayName}
-                        </span>
+                    <div key={i} className="panel" style={{ padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 14, color: 'var(--accent-moon)', width: 28, fontWeight: 600 }}>#{i + 1}</span>
+                        <span style={{ fontSize: 14 }}>{entryRank.emoji}</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{entry.displayName}</span>
                       </div>
-                      <span
-                        className="text-[9px]"
-                        style={{ color: entryRank.color }}
-                      >
+                      <span style={{ fontSize: 12, fontWeight: 600, color: entryRank.color }}>
                         {entry.rankPoints} pts
                       </span>
                     </div>
@@ -181,25 +137,17 @@ export default function AchievementsPage() {
               )}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number | string;
-  color: string;
-}) {
+function StatCard({ label, value, color }: { label: string; value: number | string; color: string }) {
   return (
-    <div className="pixel-box p-3 rounded text-center">
-      <div className={`text-lg pixel-text ${color}`}>{value}</div>
-      <div className="text-[8px] text-pixel-gray mt-1">{label}</div>
+    <div className="panel" style={{ padding: 16, textAlign: 'center' }}>
+      <div className="font-pixel" style={{ fontSize: 20, color }}>{value}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>{label}</div>
     </div>
   );
 }

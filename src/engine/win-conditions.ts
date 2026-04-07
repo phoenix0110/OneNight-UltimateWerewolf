@@ -1,9 +1,16 @@
 import { GameState } from './game-state';
 import { VoteResult } from './voting';
 
+export type WinReasonKey =
+  | 'reasonNoWwNobodyDied'
+  | 'reasonNoWwSomeoneDied'
+  | 'reasonWwKilled'
+  | 'reasonNoWwKilled';
+
 export type WinResult = {
   winners: ('village' | 'werewolf' | 'tanner')[];
-  reason: string;
+  reasonKey: WinReasonKey;
+  tannerAlsoWins: boolean;
   playerResults: { playerId: number; won: boolean; finalRole: string }[];
 };
 
@@ -24,10 +31,11 @@ export function determineWinners(
     (id) => state.players[id].currentRole === 'tanner'
   );
 
-  let reason = '';
+  let reasonKey: WinReasonKey;
+  const tannerAlsoWins = killedTanner !== undefined;
 
   // Tanner win check (independent)
-  if (killedTanner !== undefined) {
+  if (tannerAlsoWins) {
     winners.push('tanner');
   }
 
@@ -35,25 +43,20 @@ export function determineWinners(
     // No werewolves in play
     if (killedPlayerIds.length === 0) {
       winners.push('village');
-      reason = 'No werewolves in play and nobody was killed. Village wins!';
+      reasonKey = 'reasonNoWwNobodyDied';
     } else {
       winners.push('werewolf');
-      reason =
-        'No werewolves in play but someone was killed. Werewolf team wins!';
+      reasonKey = 'reasonNoWwSomeoneDied';
     }
   } else {
     // Werewolves exist
     if (killedWerewolves.length > 0) {
       winners.push('village');
-      reason = 'A werewolf was killed! Village wins!';
+      reasonKey = 'reasonWwKilled';
     } else {
       winners.push('werewolf');
-      reason = 'No werewolf was killed. Werewolf team wins!';
+      reasonKey = 'reasonNoWwKilled';
     }
-  }
-
-  if (killedTanner !== undefined) {
-    reason += ' Tanner also wins by getting killed!';
   }
 
   const playerResults = state.players.map((p) => {
@@ -70,5 +73,5 @@ export function determineWinners(
     };
   });
 
-  return { winners, reason, playerResults };
+  return { winners, reasonKey, tannerAlsoWins, playerResults };
 }

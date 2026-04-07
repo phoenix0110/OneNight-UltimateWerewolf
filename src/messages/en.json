@@ -45,7 +45,10 @@
     "startGame": "Start Game",
     "aiProvider": "AI Provider",
     "apiKey": "API Key (optional)",
-    "apiKeyHint": "API key is required for AI to speak during discussion"
+    "apiKeyHint": "API key is required for AI to speak during discussion",
+    "namePlaceholder": "Enter your name...",
+    "nameRequired": "Enter your name to continue",
+    "rolesRemaining": "Select {count} more role(s)"
   },
   "roles": {
     "werewolf": "Werewolf",
@@ -117,7 +120,21 @@
     "backToMenu": "Back to Menu",
     "votes": "votes",
     "centerCards": "Center Cards",
-    "youAre": "You are the"
+    "youAre": "You are the",
+    "waitNightActions": "Wait patiently while night actions are performed...",
+    "villageSquare": "Village Square",
+    "target": "Target",
+    "votingFor": "Voting for:",
+    "you": "(You)",
+    "teamWerewolf": "🐺 Werewolf Team",
+    "teamVillage": "🏘️ Village Team",
+    "teamSolo": "🪶 Solo",
+    "teamUnknown": "🪞 Depends...",
+    "reasonNoWwNobodyDied": "No werewolves in play and nobody was killed. Village wins!",
+    "reasonNoWwSomeoneDied": "No werewolves in play but someone was killed. Werewolf team wins!",
+    "reasonWwKilled": "A werewolf was killed! Village wins!",
+    "reasonNoWwKilled": "No werewolf was killed. Werewolf team wins!",
+    "reasonTannerAlsoWins": " Tanner also wins by getting killed!"
   },
   "achievements": {
     "title": "Achievements",

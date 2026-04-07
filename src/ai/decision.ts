@@ -1,6 +1,7 @@
 import { GameState, NightActionLog } from '@/engine/game-state';
+
+import { AIPersonality, getPersonalityPrompt, getVotePersonalityPrompt } from './personality';
 import { buildDiscussionPrompt, buildSystemPrompt, buildVotePrompt, DiscussionContext } from './prompts';
-import { getPersonalityPrompt, AIPersonality } from './personality';
 import { ChatMessage as ProviderChatMessage } from './providers';
 
 interface AIContext {
@@ -49,6 +50,7 @@ export function buildVoteChatMessages(
 ): ProviderChatMessage[] {
   const player = state.players[context.playerIndex];
   const personalityPrompt = getPersonalityPrompt(context.personality);
+  const votePersonalityPrompt = getVotePersonalityPrompt(context.personality);
 
   const systemMsg = buildSystemPrompt(
     player.originalRole,
@@ -65,7 +67,7 @@ export function buildVoteChatMessages(
     .filter((p) => p.id !== context.playerIndex)
     .map((p) => p.name);
 
-  const userMsg = buildVotePrompt(chatHistory, playerNames, context.nightLog);
+  const userMsg = buildVotePrompt(chatHistory, playerNames, context.nightLog, votePersonalityPrompt);
 
   return [
     { role: 'system', content: systemMsg },
