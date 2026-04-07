@@ -37,8 +37,8 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={`h-full ${pixelFont.variable}`}>
-      <body className="min-h-full flex flex-col bg-pixel-dark text-pixel-white font-pixel">
+    <html lang={locale} className={pixelFont.variable}>
+      <body>
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             {children}

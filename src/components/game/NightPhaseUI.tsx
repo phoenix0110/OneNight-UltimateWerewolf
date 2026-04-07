@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useGameStore } from '@/store/game-store';
 import { NightActionChoice } from '@/engine/night-actions';
+import PhaseHeader from './PhaseHeader';
 import PlayerAvatar from './PlayerAvatar';
 
 export default function NightPhaseUI() {
@@ -29,14 +30,11 @@ export default function NightPhaseUI() {
 
   const handleConfirmAction = () => {
     let action: NightActionChoice;
-
     switch (role) {
       case 'seer':
-        if (actionOption === 'center') {
-          action = { role, centerTargets: selectedCenter, option: 'center' };
-        } else {
-          action = { role, targets: selectedTargets, option: 'player' };
-        }
+        action = actionOption === 'center'
+          ? { role, centerTargets: selectedCenter, option: 'center' }
+          : { role, targets: selectedTargets, option: 'player' };
         break;
       case 'robber':
         action = { role, targets: selectedTargets };
@@ -54,198 +52,216 @@ export default function NightPhaseUI() {
         action = { role };
         break;
     }
-
     setHumanNightAction(action);
     setActionConfirmed(true);
   };
 
-  const handleProceed = () => {
-    executeNightPhase();
-  };
-
   const canConfirm = () => {
     switch (role) {
-      case 'seer':
-        return actionOption === 'player' ? selectedTargets.length === 1 : selectedCenter.length === 2;
-      case 'robber':
-      case 'doppelganger':
-        return selectedTargets.length === 1;
-      case 'troublemaker':
-        return selectedTargets.length === 2;
-      case 'drunk':
-        return selectedCenter.length === 1;
-      default:
-        return true;
+      case 'seer': return actionOption === 'player' ? selectedTargets.length === 1 : selectedCenter.length === 2;
+      case 'robber': case 'doppelganger': return selectedTargets.length === 1;
+      case 'troublemaker': return selectedTargets.length === 2;
+      case 'drunk': return selectedCenter.length === 1;
+      default: return true;
     }
   };
 
   const toggleTarget = (id: number) => {
-    const maxTargets = role === 'troublemaker' ? 2 : 1;
-    if (selectedTargets.includes(id)) {
-      setSelectedTargets(selectedTargets.filter((t) => t !== id));
-    } else if (selectedTargets.length < maxTargets) {
-      setSelectedTargets([...selectedTargets, id]);
-    }
+    const max = role === 'troublemaker' ? 2 : 1;
+    if (selectedTargets.includes(id)) setSelectedTargets(selectedTargets.filter((t) => t !== id));
+    else if (selectedTargets.length < max) setSelectedTargets([...selectedTargets, id]);
   };
 
   const toggleCenter = (idx: number) => {
-    const maxCenter = role === 'seer' ? 2 : 1;
-    if (selectedCenter.includes(idx)) {
-      setSelectedCenter(selectedCenter.filter((c) => c !== idx));
-    } else if (selectedCenter.length < maxCenter) {
-      setSelectedCenter([...selectedCenter, idx]);
+    const max = role === 'seer' ? 2 : 1;
+    if (selectedCenter.includes(idx)) setSelectedCenter(selectedCenter.filter((c) => c !== idx));
+    else if (selectedCenter.length < max) setSelectedCenter([...selectedCenter, idx]);
+  };
+
+  const getRoleInstruction = () => {
+    switch (role) {
+      case 'werewolf': return 'Look for other werewolves...';
+      case 'seer': return 'View a player\'s card or two center cards';
+      case 'robber': return 'Swap your card with another player\'s card';
+      case 'troublemaker': return 'Swap two other players\' cards';
+      case 'insomniac': return 'Check your card at the end of the night...';
+      case 'drunk': return 'Swap your card with a center card (without looking)';
+      case 'minion': return 'See who the werewolves are...';
+      case 'mason': return 'See the other mason...';
+      case 'doppelganger': return 'Choose a player to copy their role';
+      default: return 'You have no action tonight.';
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4">
-      {/* Night sky effect */}
-      <div className="text-center mb-6">
-        <div className="text-2xl mb-2">🌙</div>
-        <h2 className="text-sm pixel-text text-pixel-blue mb-1">
-          {t('game.night')}
-        </h2>
-        <p className="text-[9px] text-pixel-gray">{t('game.nightDesc')}</p>
-      </div>
+    <div className="scene-night-sky" style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 512, margin: '0 auto', width: '100%' }}>
+      <PhaseHeader icon="🌙" title={t('game.night')} accentColor="cyan" subtitle={t('game.nightDesc')} />
 
-      {/* Your role reminder */}
-      <div className="pixel-box p-3 rounded text-center mb-4 w-full max-w-sm">
-        <div className="text-[9px] text-pixel-light">{t('game.yourRole')}</div>
-        <div className="text-xs pixel-text text-pixel-cyan">
-          {t(`roles.${role}`)}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Your Role */}
+        <div className="panel-raised" style={{ padding: 16, textAlign: 'center' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{t('game.yourRole')}</div>
+          <div className="font-pixel text-glow-cyan" style={{ fontSize: 18, color: 'var(--accent-cyan)' }}>
+            {t(`roles.${role}`)}
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 8 }}>
+            {getRoleInstruction()}
+          </div>
         </div>
-      </div>
 
-      {!hasNightAction ? (
-        <div className="pixel-box p-4 rounded text-center mb-6">
-          <p className="text-[10px] text-pixel-light">{t('game.noAction')}</p>
-        </div>
-      ) : !actionConfirmed ? (
-        <div className="w-full max-w-sm">
-          <h3 className="text-[10px] text-pixel-yellow mb-3">
-            {t('game.yourAction')}
-          </h3>
+        {!hasNightAction ? (
+          <div className="panel" style={{ padding: 24, textAlign: 'center' }}>
+            <div style={{ fontSize: 28, marginBottom: 12 }}>😴</div>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{t('game.noAction')}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+              {t('game.waitNightActions')}
+            </p>
+          </div>
+        ) : !actionConfirmed ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-moon)', margin: 0 }}>
+              {t('game.yourAction')}
+            </h3>
 
-          {/* Seer option toggle */}
-          {role === 'seer' && (
-            <div className="flex gap-2 mb-3">
-              <button
-                onClick={() => { setActionOption('player'); setSelectedCenter([]); }}
-                className={`pixel-btn px-3 py-1 text-[9px] flex-1 ${
-                  actionOption === 'player' ? 'pixel-btn-success' : ''
-                }`}
-              >
-                {t('game.viewPlayer')}
-              </button>
-              <button
-                onClick={() => { setActionOption('center'); setSelectedTargets([]); }}
-                className={`pixel-btn px-3 py-1 text-[9px] flex-1 ${
-                  actionOption === 'center' ? 'pixel-btn-success' : ''
-                }`}
-              >
-                {t('game.viewCenter')}
-              </button>
-            </div>
-          )}
+            {/* Seer toggle */}
+            {role === 'seer' && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setActionOption('player'); setSelectedCenter([]); }}
+                  className={`btn ${actionOption === 'player' ? 'btn-success' : 'btn-secondary'}`}
+                  style={{ flex: 1, fontSize: 13 }}
+                >
+                  {t('game.viewPlayer')}
+                </button>
+                <button
+                  onClick={() => { setActionOption('center'); setSelectedTargets([]); }}
+                  className={`btn ${actionOption === 'center' ? 'btn-success' : 'btn-secondary'}`}
+                  style={{ flex: 1, fontSize: 13 }}
+                >
+                  {t('game.viewCenter')}
+                </button>
+              </div>
+            )}
 
-          {/* Player selection */}
-          {(role !== 'seer' || actionOption === 'player') &&
-            ['seer', 'robber', 'troublemaker', 'doppelganger'].includes(role) && (
-              <div className="mb-3">
-                <div className="text-[9px] text-pixel-light mb-2">
+            {/* Player selection */}
+            {(role !== 'seer' || actionOption === 'player') && ['seer', 'robber', 'troublemaker', 'doppelganger'].includes(role) && (
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
                   {t('game.selectPlayer')}
                 </div>
-                <div className="flex flex-wrap gap-3 justify-center">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                   {otherPlayers.map((p) => (
-                    <PlayerAvatar
+                    <button
                       key={p.id}
-                      name={p.name}
-                      size="sm"
-                      isSelected={selectedTargets.includes(p.id)}
                       onClick={() => toggleTarget(p.id)}
-                    />
+                      className="panel"
+                      style={{
+                        padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                        borderColor: selectedTargets.includes(p.id) ? 'var(--accent-cyan)' : undefined,
+                        boxShadow: selectedTargets.includes(p.id) ? '0 0 0 1px rgba(89,208,255,0.4)' : undefined,
+                        background: selectedTargets.includes(p.id) ? 'rgba(89,208,255,0.05)' : undefined,
+                      }}
+                    >
+                      <PlayerAvatar name={p.name} size="sm" isSelected={selectedTargets.includes(p.id)} />
+                    </button>
                   ))}
                 </div>
               </div>
             )}
 
-          {/* Center card selection */}
-          {((role === 'seer' && actionOption === 'center') || role === 'drunk') && (
-            <div className="mb-3">
-              <div className="text-[9px] text-pixel-light mb-2">
-                {t('game.selectCenter')}
+            {/* Center card selection */}
+            {((role === 'seer' && actionOption === 'center') || role === 'drunk') && (
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                  {t('game.selectCenter')}
+                </div>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                  {[0, 1, 2].map((idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => toggleCenter(idx)}
+                      className="panel-raised"
+                      style={{
+                        width: 64, height: 80, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 18, cursor: 'pointer', transition: 'all 0.15s',
+                        borderColor: selectedCenter.includes(idx) ? 'var(--accent-cyan)' : undefined,
+                        boxShadow: selectedCenter.includes(idx) ? '0 0 16px rgba(89,208,255,0.2), 0 0 0 2px rgba(89,208,255,0.4)' : undefined,
+                      }}
+                    >
+                      ?
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex gap-3 justify-center">
-                {[0, 1, 2].map((idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => toggleCenter(idx)}
-                    className={`w-14 h-18 pixel-box rounded flex items-center justify-center text-sm transition-all ${
-                      selectedCenter.includes(idx)
-                        ? 'ring-2 ring-pixel-yellow animate-glow'
-                        : ''
-                    }`}
-                  >
-                    ?
-                  </button>
+            )}
+
+            {/* Passive roles */}
+            {['werewolf', 'insomniac', 'minion', 'mason'].includes(role) && (
+              <div className="panel" style={{ padding: 16, textAlign: 'center' }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>👁️</div>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{getRoleInstruction()}</div>
+              </div>
+            )}
+
+            {/* Selection summary */}
+            {(selectedTargets.length > 0 || selectedCenter.length > 0) && (
+              <div className="panel anim-fade-in-up" style={{ padding: 12, textAlign: 'center' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Selected: </span>
+                <span style={{ fontSize: 14, color: 'var(--accent-cyan)', fontWeight: 600 }}>
+                  {selectedTargets.map((id) => players.find((p) => p.id === id)?.name).filter(Boolean).join(', ')}
+                  {selectedCenter.map((idx) => `Center #${idx + 1}`).join(', ')}
+                </span>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Night Result */
+          <div className="panel-raised anim-fade-in-up" style={{ padding: 24, textAlign: 'center' }}>
+            <div style={{ fontSize: 24, marginBottom: 12 }}>✨</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-moon)', marginBottom: 12 }}>
+              {t('game.nightResult')}
+            </div>
+            {nightRevealed && nightRevealed.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {nightRevealed.map((r, i) => (
+                  <div key={i} style={{ fontSize: 14, color: 'var(--accent-cyan)' }}>
+                    {typeof r.targetIndex === 'number' && players[r.targetIndex]
+                      ? `${players[r.targetIndex].name}: ${t(`roles.${r.role}`)}`
+                      : `Center card: ${t(`roles.${r.role}`)}`}
+                  </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                {role === 'troublemaker' ? 'Cards swapped!' : 'No information revealed.'}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-          {/* Passive roles */}
-          {['werewolf', 'insomniac', 'minion', 'mason'].includes(role) && (
-            <div className="text-[9px] text-pixel-light text-center mb-3">
-              {role === 'werewolf' && 'Look for other werewolves...'}
-              {role === 'insomniac' && 'Check your card at the end of the night...'}
-              {role === 'minion' && 'See who the werewolves are...'}
-              {role === 'mason' && 'See the other mason...'}
-            </div>
-          )}
-
+      {/* Action Footer */}
+      <div className="sticky-footer" style={{ padding: 16 }}>
+        {!actionConfirmed && hasNightAction ? (
           <button
             onClick={handleConfirmAction}
             disabled={!canConfirm()}
-            className={`pixel-btn px-6 py-2 text-[10px] w-full ${
-              canConfirm() ? 'pixel-btn-success' : 'opacity-50 cursor-not-allowed'
-            }`}
+            className="btn btn-success"
+            style={{ width: '100%', fontSize: 14, minHeight: 48 }}
           >
             {t('game.confirmAction')}
           </button>
-        </div>
-      ) : (
-        /* Show night result */
-        <div className="pixel-box p-4 rounded text-center mb-6 w-full max-w-sm animate-fadeInUp">
-          <div className="text-[10px] text-pixel-yellow mb-2">
-            {t('game.nightResult')}
-          </div>
-          {nightRevealed && nightRevealed.length > 0 ? (
-            <div className="space-y-2">
-              {nightRevealed.map((r, i) => (
-                <div key={i} className="text-[10px] text-pixel-cyan">
-                  {typeof r.targetIndex === 'number' && players[r.targetIndex]
-                    ? `${players[r.targetIndex].name}: ${t(`roles.${r.role}`)}`
-                    : `Center card: ${t(`roles.${r.role}`)}`}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-[10px] text-pixel-light">
-              {role === 'troublemaker' ? 'Cards swapped!' : 'No information revealed.'}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Proceed button */}
-      {(actionConfirmed || !hasNightAction) && (
-        <button
-          onClick={handleProceed}
-          className="pixel-btn pixel-btn-success px-8 py-3 text-[11px]"
-        >
-          {t('game.day')} →
-        </button>
-      )}
+        ) : (
+          <button
+            onClick={executeNightPhase}
+            className="btn btn-success"
+            style={{ width: '100%', fontSize: 14, minHeight: 48 }}
+          >
+            {t('game.day')} →
+          </button>
+        )}
+      </div>
     </div>
   );
 }

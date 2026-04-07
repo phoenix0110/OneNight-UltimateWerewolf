@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useGameStore } from '@/store/game-store';
-import PlayerAvatar from './PlayerAvatar';
+import DaySceneFrame from './DaySceneFrame';
+import DiscussionLogPanel from './DiscussionLogPanel';
+import PhaseHeader from './PhaseHeader';
 
 export default function DayPhaseUI() {
   const t = useTranslations();
@@ -16,27 +18,23 @@ export default function DayPhaseUI() {
   const speakingOrder = useGameStore((s) => s.speakingOrder);
   const currentSpeakerIndex = useGameStore((s) => s.currentSpeakerIndex);
   const thinkingPlayerId = useGameStore((s) => s.thinkingPlayerId);
+  const discussionRound = useGameStore((s) => s.discussionRound);
   const getBuiltInSpeechesStore = useGameStore((s) => s.getBuiltInSpeeches);
   const getFilledSpeech = useGameStore((s) => s.getFilledSpeech);
 
   const [message, setMessage] = useState('');
   const [showQuickSpeech, setShowQuickSpeech] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
   const hasStartedRef = useRef(false);
 
   const builtInSpeeches = getBuiltInSpeechesStore();
 
   const currentSpeakerId = speakingOrder[currentSpeakerIndex] ?? null;
-  const currentSpeaker = currentSpeakerId !== null
-    ? players.find((p) => p.id === currentSpeakerId)
-    : null;
+  const currentSpeaker = currentSpeakerId !== null ? players.find((p) => p.id === currentSpeakerId) : null;
   const isHumanTurn = currentSpeaker?.isHuman === true;
   const roundComplete = currentSpeakerIndex >= speakingOrder.length;
+  const thinkingPlayer = thinkingPlayerId !== null ? players.find((p) => p.id === thinkingPlayerId) ?? null : null;
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, thinkingPlayerId]);
-
+  // Auto-start discussion
   const startDiscussion = useCallback(() => {
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
@@ -49,6 +47,7 @@ export default function DayPhaseUI() {
     }
   }, [speakingOrder, startDiscussion]);
 
+  // Auto-advance AI speakers
   useEffect(() => {
     if (isHumanTurn || roundComplete || isProcessing) return;
     if (currentSpeakerIndex > 0 && !isProcessing && currentSpeaker && !currentSpeaker.isHuman) {
@@ -74,116 +73,112 @@ export default function DayPhaseUI() {
     setShowQuickSpeech(false);
   };
 
-  const getPlayerColor = (playerId: number) => {
-    if (playerId === -1) return 'text-pixel-orange';
-    const player = players.find((p) => p.id === playerId);
-    return player?.isHuman ? 'text-pixel-cyan' : 'text-pixel-orange';
+  const handleNextRound = () => {
+    const state = useGameStore.getState();
+    const newOrder = [...state.speakingOrder];
+    useGameStore.setState({
+      speakingOrder: newOrder,
+      currentSpeakerIndex: 0,
+      discussionRound: state.discussionRound + 1,
+    });
+    hasStartedRef.current = false;
   };
 
-  const thinkingPlayer = thinkingPlayerId !== null
-    ? players.find((p) => p.id === thinkingPlayerId)
-    : null;
-
   return (
-    <div className="flex-1 flex flex-col p-4 max-w-lg mx-auto w-full">
-      {/* Header */}
-      <div className="text-center mb-3">
-        <div className="text-xl mb-1">☀️</div>
-        <h2 className="text-sm pixel-text text-pixel-yellow">
-          {t('game.day')}
-        </h2>
-        <p className="text-[9px] text-pixel-gray">{t('game.dayDesc')}</p>
-      </div>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 640, margin: '0 auto', width: '100%' }}>
+      {/* Phase HUD */}
+      <PhaseHeader
+        icon="☀️"
+        title={t('game.day')}
+        accentColor="moon"
+        subtitle={
+          currentSpeaker && !roundComplete
+            ? currentSpeaker.isHuman
+              ? t('game.yourTurn')
+              : `${currentSpeaker.name} ${t('game.isSpeaking')}`
+            : roundComplete
+              ? t('game.nextRound')
+              : undefined
+        }
+        badge={
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 99 }}>
+            R{discussionRound + 1}
+          </span>
+        }
+      />
 
-      {/* Speaking order */}
-      <div className="flex flex-wrap gap-1.5 pb-2 mb-3 justify-center items-center">
+      {/* Village Square Scene */}
+      <DaySceneFrame
+        players={players}
+        currentSpeakerId={currentSpeakerId}
+        thinkingPlayerId={thinkingPlayerId}
+        currentSpeakerIndex={currentSpeakerIndex}
+        speakingOrder={speakingOrder}
+      />
+
+      {/* Speaking order strip */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', overflowX: 'auto' }}>
         {speakingOrder.map((id, idx) => {
           const p = players.find((pl) => pl.id === id);
           if (!p) return null;
           const isCurrent = idx === currentSpeakerIndex;
           const isDone = idx < currentSpeakerIndex;
           return (
-            <div key={id} className="flex items-center gap-1">
-              {idx > 0 && <span className="text-[8px] text-pixel-gray">→</span>}
-              <div className={`relative transition-all ${isCurrent ? 'scale-110' : ''} ${isDone ? 'opacity-40' : ''}`}>
-                <PlayerAvatar
-                  name={p.name}
-                  isHuman={p.isHuman}
-                  size="sm"
-                  isSelected={isCurrent}
-                />
-                <span className="absolute -top-1 -left-1 bg-pixel-dark text-pixel-light text-[7px] w-3.5 h-3.5 rounded-full flex items-center justify-center border border-pixel-gray">
-                  {idx + 1}
-                </span>
-              </div>
+            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              {idx > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>→</span>}
+              <span style={{
+                fontSize: 12, padding: '2px 8px', borderRadius: 99, transition: 'all 0.15s',
+                background: isCurrent ? 'rgba(246,211,101,0.2)' : 'transparent',
+                color: isCurrent ? 'var(--accent-moon)' : isDone ? 'var(--text-muted)' : 'var(--text-secondary)',
+                fontWeight: isCurrent ? 600 : 400,
+                textDecoration: isDone ? 'line-through' : 'none',
+                opacity: isDone ? 0.5 : 1,
+              }}>
+                {p.name}
+              </span>
             </div>
           );
         })}
       </div>
 
-      {/* Current speaker indicator */}
-      {currentSpeaker && !roundComplete && (
-        <div className="text-center mb-2">
-          <span className="text-[9px] text-pixel-yellow">
-            {currentSpeaker.isHuman
-              ? (t('game.yourTurn'))
-              : `${currentSpeaker.name} ${t('game.isSpeaking')}`}
+      {/* Your Turn Banner */}
+      {isHumanTurn && (
+        <div style={{
+          margin: '0 16px 8px', padding: '8px 16px', borderRadius: 8, textAlign: 'center',
+          background: 'rgba(89,208,255,0.1)', border: '1px solid rgba(89,208,255,0.3)',
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)' }}>
+            🎤 {t('game.yourTurn')}
           </span>
         </div>
       )}
 
-      {/* Chat area */}
-      <div className="flex-1 pixel-box rounded p-3 mb-3 overflow-y-auto max-h-[300px] pixel-scroll">
-        {chatMessages.length === 0 && !thinkingPlayer && (
-          <div className="text-pixel-gray text-[9px] text-center py-4">
-            {t('game.dayDesc')}
-          </div>
-        )}
-        {chatMessages.map((msg, i) => (
-          <div
-            key={i}
-            className={`mb-2 animate-slideIn ${msg.playerId === -1 ? 'opacity-70' : ''}`}
-            style={{ animationDelay: `${i * 50}ms` }}
-          >
-            <span className={`text-[9px] font-bold ${getPlayerColor(msg.playerId)}`}>
-              {msg.playerName}:
-            </span>{' '}
-            <span className="text-[9px] text-pixel-white">{msg.text}</span>
-          </div>
-        ))}
-
-        {/* Thinking bubble */}
-        {thinkingPlayer && (
-          <div className="mb-2 animate-slideIn">
-            <span className="text-[9px] font-bold text-pixel-orange">
-              {thinkingPlayer.name}:
-            </span>{' '}
-            <span className="text-[9px] text-pixel-gray inline-flex items-center gap-1">
-              <span className="inline-block w-1.5 h-1.5 bg-pixel-gray rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="inline-block w-1.5 h-1.5 bg-pixel-gray rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="inline-block w-1.5 h-1.5 bg-pixel-gray rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </span>
-          </div>
-        )}
-
-        <div ref={chatEndRef} />
+      {/* Discussion Log */}
+      <div style={{ flex: 1, padding: '0 16px 8px', minHeight: 0, display: 'flex', flexDirection: 'column', maxHeight: 340 }}>
+        <DiscussionLogPanel
+          messages={chatMessages}
+          players={players}
+          thinkingPlayer={thinkingPlayer}
+          emptyText={t('game.dayDesc')}
+        />
       </div>
 
-      {/* Human input area - only visible on human's turn */}
+      {/* Human Input Area */}
       {isHumanTurn && (
-        <>
-          {/* Quick speech panel */}
+        <div style={{ padding: '0 16px 8px' }}>
+          {/* Quick speech drawer */}
           {showQuickSpeech && (
-            <div className="pixel-box rounded p-2 mb-2 max-h-[150px] overflow-y-auto pixel-scroll">
-              <div className="text-[8px] text-pixel-yellow mb-1">
+            <div className="panel custom-scroll" style={{ padding: 12, marginBottom: 8, maxHeight: 160, overflowY: 'auto' }}>
+              <div style={{ fontSize: 12, color: 'var(--accent-moon)', fontWeight: 600, marginBottom: 8 }}>
                 {t('game.quickSpeech')}
               </div>
-              <div className="space-y-1">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {builtInSpeeches.map((speech) => (
                   <button
                     key={speech.id}
                     onClick={() => handleQuickSpeech(speech.template)}
-                    className="w-full text-left pixel-btn px-2 py-1 text-[8px]"
+                    className="btn btn-secondary"
+                    style={{ textAlign: 'left', fontSize: 13, padding: '8px 12px', minHeight: 0 }}
                   >
                     {getFilledSpeech(speech)}
                   </button>
@@ -192,11 +187,12 @@ export default function DayPhaseUI() {
             </div>
           )}
 
-          {/* Input area */}
-          <div className="flex gap-2 mb-3">
+          {/* Input bar */}
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => setShowQuickSpeech(!showQuickSpeech)}
-              className="pixel-btn px-2 py-2 text-[9px]"
+              className="btn btn-secondary"
+              style={{ padding: '0 12px', minHeight: 44 }}
               title={t('game.quickSpeech')}
             >
               💬
@@ -206,44 +202,29 @@ export default function DayPhaseUI() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              className="flex-1 pixel-box px-3 py-2 text-[10px] text-pixel-white bg-pixel-dark outline-none"
+              className="input"
+              style={{ flex: 1 }}
               placeholder={t('game.typeMessage')}
             />
-            <button
-              onClick={handleSend}
-              className="pixel-btn pixel-btn-success px-3 py-2 text-[9px]"
-            >
+            <button onClick={handleSend} className="btn btn-success" style={{ padding: '0 16px', minHeight: 44, fontSize: 13 }}>
               {t('game.send')}
             </button>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Actions at bottom */}
-      <div className="flex gap-2">
+      {/* Action Footer */}
+      <div className="sticky-footer" style={{ display: 'flex', gap: 12, padding: 16 }}>
         {roundComplete && (
-          <button
-            onClick={() => {
-              const state = useGameStore.getState();
-              const newOrder = [...state.speakingOrder];
-              useGameStore.setState({
-                speakingOrder: newOrder,
-                currentSpeakerIndex: 0,
-                discussionRound: state.discussionRound + 1,
-              });
-              hasStartedRef.current = false;
-            }}
-            className="pixel-btn px-4 py-2 text-[9px] flex-1"
-          >
+          <button onClick={handleNextRound} className="btn btn-secondary" style={{ flex: 1, fontSize: 13 }}>
             🔄 {t('game.nextRound')}
           </button>
         )}
         <button
           onClick={proceedToVote}
           disabled={isProcessing}
-          className={`pixel-btn pixel-btn-danger px-4 py-2 text-[9px] flex-1 ${
-            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className="btn btn-danger"
+          style={{ flex: 1, fontSize: 13 }}
         >
           {t('game.proceedToVote')} →
         </button>
