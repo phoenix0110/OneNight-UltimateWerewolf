@@ -103,7 +103,7 @@ function resolveWerewolf(
       role: 'werewolf',
       actorIndex,
       description: `Lone Werewolf peeks at center card ${centerIdx + 1}: ${state.centerCards[centerIdx]}`,
-      revealed: [{ targetIndex: centerIdx, role: state.centerCards[centerIdx] }],
+      revealed: [{ targetIndex: centerIdx, role: state.centerCards[centerIdx], isCenterCard: true }],
     },
   };
 }
@@ -122,8 +122,8 @@ function resolveSeer(
         actorIndex,
         description: `Seer views center cards ${c1 + 1} and ${c2 + 1}: ${state.centerCards[c1]}, ${state.centerCards[c2]}`,
         revealed: [
-          { targetIndex: c1, role: state.centerCards[c1] },
-          { targetIndex: c2, role: state.centerCards[c2] },
+          { targetIndex: c1, role: state.centerCards[c1], isCenterCard: true },
+          { targetIndex: c2, role: state.centerCards[c2], isCenterCard: true },
         ],
       },
     };

@@ -2,17 +2,20 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
+  getRedirectResult,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
   signOut as firebaseSignOut,
   User,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, googleProvider, isFirebaseConfigured } from './firebase';
+import { auth, db, googleProvider, isFirebaseConfigured, useEmulators } from './firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isConfigured: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -20,6 +23,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  isConfigured: false,
   signInWithGoogle: async () => {},
   signOut: async () => {},
 });
@@ -30,6 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!auth || !isFirebaseConfigured) return;
+
+    if (useEmulators) {
+      getRedirectResult(auth).catch(() => {});
+    }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
@@ -45,9 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: firebaseUser.email,
             photoURL: firebaseUser.photoURL,
             stats: { gamesPlayed: 0, wins: 0, losses: 0, winRate: 0 },
-            rankPoints: 0,
-            rank: 'bronze_1',
-            subscription: { plan: 'free', expiresAt: null },
+            stars: 0,
+            rank: 'bronze_3',
+            subscription: { plan: 'free', gamesRemaining: 1, expiresAt: null },
             createdAt: serverTimestamp(),
           });
         }
@@ -58,9 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    if (!auth || !googleProvider) return;
+    if (!auth || !googleProvider) {
+      alert(
+        isFirebaseConfigured
+          ? 'Google sign-in failed. Please try again.'
+          : 'Google login requires Firebase configuration. Add NEXT_PUBLIC_FIREBASE_* variables to .env'
+      );
+      return;
+    }
     try {
-      await signInWithPopup(auth, googleProvider);
+      if (useEmulators) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
     } catch (error) {
       console.error('Google sign-in error:', error);
     }
@@ -76,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isConfigured: isFirebaseConfigured, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

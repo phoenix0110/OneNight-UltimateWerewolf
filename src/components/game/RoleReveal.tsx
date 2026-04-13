@@ -3,27 +3,40 @@
 import { useTranslations } from 'next-intl';
 import { useGameStore } from '@/store/game-store';
 import PlayerAvatar from './PlayerAvatar';
+import TavernScene from './TavernScene';
+import RoundTable from './RoundTable';
+import RoleRevealCard from './RoleRevealCard';
+import PhaseHeader from './PhaseHeader';
+import ActionFooter from './ActionFooter';
 
-const ALIGNMENT_COLOR: Record<string, string> = {
-  werewolf: 'var(--accent-red)',
-  minion: 'var(--accent-red)',
-  tanner: 'var(--accent-orange)',
-  doppelganger: 'var(--accent-purple)',
-};
+const AREA_SIZE = 440;
+const CENTER = AREA_SIZE / 2; // 220
+const AVATAR_ORBIT_RADIUS = 180;
+const AVATAR_BOX_HALF = 24; // SIZE_MAP.sm.box / 2
+const TABLE_DIAMETER = 210;
 
-const ALIGNMENT_GLOW: Record<string, string> = {
-  werewolf: '0 0 30px rgba(255,107,107,0.3)',
-  minion: '0 0 30px rgba(255,107,107,0.2)',
-  tanner: '0 0 30px rgba(255,180,84,0.3)',
-  doppelganger: '0 0 30px rgba(176,140,255,0.3)',
-};
+/**
+ * Place N players evenly on a circle.
+ * Slot 0 (human) = bottom (6 o'clock), then clockwise.
+ *
+ * Each returned (x, y) is the avatar's intended visual center.
+ */
+function getPlayerPositions(players: { id: number; isHuman: boolean }[]) {
+  const total = players.length;
+  const nonHumans = players.filter((p) => !p.isHuman);
 
-const ALIGNMENT_TEAM_KEY: Record<string, string> = {
-  werewolf: 'game.teamWerewolf',
-  minion: 'game.teamWerewolf',
-  tanner: 'game.teamSolo',
-  doppelganger: 'game.teamUnknown',
-};
+  return players.map((player) => {
+    const slot = player.isHuman ? 0 : nonHumans.indexOf(player) + 1;
+    // Start at PI/2 (6 o'clock in screen coords where Y points down), go clockwise
+    const angle = Math.PI / 2 + (slot / total) * 2 * Math.PI;
+
+    return {
+      x: CENTER + Math.cos(angle) * AVATAR_ORBIT_RADIUS,
+      y: CENTER + Math.sin(angle) * AVATAR_ORBIT_RADIUS,
+      isHuman: player.isHuman,
+    };
+  });
+}
 
 export default function RoleReveal() {
   const t = useTranslations();
@@ -35,113 +48,184 @@ export default function RoleReveal() {
   if (!humanPlayer) return null;
 
   const role = humanPlayer.originalRole;
-  const color = ALIGNMENT_COLOR[role] || 'var(--accent-cyan)';
-  const glow = ALIGNMENT_GLOW[role] || '0 0 30px rgba(89,208,255,0.3)';
-  const teamLabelKey = ALIGNMENT_TEAM_KEY[role] || 'game.teamVillage';
-  const teamLabel = t(teamLabelKey);
+  const positions = getPlayerPositions(players);
 
-  const teamBorder = role === 'werewolf' || role === 'minion'
-    ? 'rgba(255,107,107,0.3)'
-    : role === 'tanner'
-      ? 'rgba(255,180,84,0.3)'
-      : role === 'doppelganger'
-        ? 'rgba(176,140,255,0.3)'
-        : 'rgba(125,255,152,0.3)';
-  const teamBg = role === 'werewolf' || role === 'minion'
-    ? 'rgba(255,107,107,0.1)'
-    : role === 'tanner'
-      ? 'rgba(255,180,84,0.1)'
-      : role === 'doppelganger'
-        ? 'rgba(176,140,255,0.1)'
-        : 'rgba(125,255,152,0.1)';
-  const teamColor = role === 'werewolf' || role === 'minion'
-    ? 'var(--accent-red)'
-    : role === 'tanner'
-      ? 'var(--accent-orange)'
-      : role === 'doppelganger'
-        ? 'var(--accent-purple)'
-        : 'var(--accent-lime)';
+  const basePlayerDelay = 400;
+  const playerStagger = 100;
 
   return (
-    <div className="scene-night-sky" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      {/* Players circle */}
-      <div style={{ position: 'relative', width: 288, height: 288, marginBottom: 24 }}>
-        {players.map((player, i) => {
-          const angle = (i / players.length) * 2 * Math.PI - Math.PI / 2;
-          const radius = 110;
-          const x = 50 + (Math.cos(angle) * radius) / 2.88;
-          const y = 50 + (Math.sin(angle) * radius) / 2.88;
-
-          return (
-            <div
-              key={player.id}
-              className="anim-fade-in-up"
-              style={{
-                position: 'absolute',
-                left: `${x}%`,
-                top: `${y}%`,
-                transform: 'translate(-50%, -50%)',
-                animationDelay: `${i * 100}ms`,
-              }}
-            >
-              <PlayerAvatar
-                name={player.name}
-                isHuman={player.isHuman}
-                showRole={player.isHuman}
-                role={player.isHuman ? player.originalRole : undefined}
-                size="sm"
-              />
-            </div>
-          );
-        })}
-
-        {/* Center cards */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 6 }}>
-            {t('game.centerCards')}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="panel-raised"
-                style={{ width: 40, height: 48, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--text-muted)' }}
-              >
-                ?
-              </div>
-            ))}
-          </div>
-        </div>
+    <TavernScene layout="wide">
+      {/* Phase Header */}
+      <div
+        className="anim-fade-in-up"
+        style={{
+          opacity: 0,
+          animationDelay: '0ms',
+          animationFillMode: 'forwards',
+          width: '100%',
+          paddingTop: 16,
+        }}
+      >
+        <PhaseHeader
+          icon="🕯️"
+          title={t('game.roleRevealTitle')}
+          subtitle={t('game.roleRevealSubtitle')}
+          accentColor="moon"
+        />
       </div>
 
-      {/* Role Card */}
+      {/* Main content — left-right split on desktop, stacked on mobile */}
       <div
-        className="panel-raised anim-fade-in-up"
-        style={{ padding: 32, borderRadius: 12, textAlign: 'center', marginBottom: 24, maxWidth: 360, width: '100%', boxShadow: glow }}
+        className="role-reveal-split"
+        style={{
+          display: 'flex',
+          flex: 1,
+          width: '100%',
+          gap: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px 0',
+        }}
       >
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-          {t('game.youAre')}
-        </div>
-        <div className="font-pixel" style={{ fontSize: 24, color, marginBottom: 12, textShadow: `0 0 12px ${color}40` }}>
-          {t(`roles.${role}`)}
-        </div>
-        <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-          {t(`roles.${role}Desc`)}
-        </div>
-        <span
+        {/* Left: Role Reveal Card */}
+        <div
           style={{
-            display: 'inline-block', fontSize: 12, padding: '4px 12px', borderRadius: 99,
-            border: `1px solid ${teamBorder}`, background: teamBg, color: teamColor,
+            flex: '1 1 0',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 0,
           }}
         >
-          {teamLabel}
-        </span>
+          <RoleRevealCard role={role} animationDelay={800} />
+        </div>
+
+        {/* Right: Round table with seated players */}
+        <div
+          style={{
+            flex: '1 1 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 0,
+          }}
+        >
+          {/* Square positioning area — every element uses the same CENTER point */}
+          <div
+            style={{
+              position: 'relative',
+              width: AREA_SIZE,
+              height: AREA_SIZE,
+              flexShrink: 0,
+            }}
+          >
+            {/* Round table — geometrically centered with explicit offsets, no translate tricks */}
+            <div
+              style={{
+                position: 'absolute',
+                left: CENTER - TABLE_DIAMETER / 2,
+                top: CENTER - TABLE_DIAMETER / 2,
+                width: TABLE_DIAMETER,
+                height: TABLE_DIAMETER,
+              }}
+            >
+              <RoundTable
+                size={TABLE_DIAMETER}
+                centerCardsCount={3}
+                animationDelay={200}
+              />
+            </div>
+
+            {/* Players on the orbit circle */}
+            {players.map((player, i) => {
+              const pos = positions[i];
+              const delay = basePlayerDelay + i * playerStagger;
+
+              return (
+                // Outer: positioning only — transform here is NOT animated
+                <div
+                  key={player.id}
+                  style={{
+                    position: 'absolute',
+                    left: pos.x,
+                    top: pos.y,
+                    transform: `translate(-50%, -${AVATAR_BOX_HALF}px)`,
+                    zIndex: player.isHuman ? 3 : 1,
+                  }}
+                >
+                  {/* Inner: animation only — its transform won't conflict with positioning */}
+                  <div
+                    className="anim-fade-in-up"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      opacity: 0,
+                      animationDelay: `${delay}ms`,
+                      animationFillMode: 'forwards',
+                    }}
+                  >
+                    <PlayerAvatar
+                      name={player.name}
+                      isHuman={player.isHuman}
+                      size="sm"
+                    />
+                    {player.isHuman && (
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: 'var(--accent-cyan)',
+                          fontWeight: 700,
+                          letterSpacing: '1.5px',
+                          textTransform: 'uppercase',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        ⭐ {t('game.you')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Proceed */}
-      <button onClick={proceedToNight} className="btn btn-success" style={{ fontSize: 16, padding: '12px 40px', minHeight: 48 }}>
-        {t('game.night')} →
-      </button>
-    </div>
+      {/* Action Footer */}
+      <div
+        className="anim-fade-in-up"
+        style={{
+          opacity: 0,
+          animationDelay: '1200ms',
+          animationFillMode: 'forwards',
+          width: '100%',
+          marginTop: 16,
+          paddingBottom: 24,
+        }}
+      >
+        <ActionFooter>
+          <button
+            onClick={proceedToNight}
+            className="btn btn-success"
+            style={{
+              fontSize: 16,
+              padding: '14px 40px',
+              minHeight: 48,
+              width: '100%',
+              maxWidth: 360,
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            🌙 {t('game.night')} →
+          </button>
+        </ActionFooter>
+      </div>
+    </TavernScene>
   );
 }

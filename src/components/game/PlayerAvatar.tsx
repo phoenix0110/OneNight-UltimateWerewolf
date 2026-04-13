@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { RoleId } from '@/engine/roles';
 
@@ -31,16 +32,122 @@ const ROLE_EMOJI: Record<RoleId, string> = {
   doppelganger: '🪞',
 };
 
-const BG_COLORS = [
-  '#1d4ed8', '#be123c', '#047857', '#b45309',
-  '#7e22ce', '#0f766e', '#4338ca', '#0369a1',
+/**
+ * Color palette for pixel characters, one per player seat.
+ * Matches the 8 possible background colors from before.
+ */
+const PIXEL_COLORS = [
+  { hair: '#4A90D9', shirt: '#1d4ed8', skin: '#FFDAB9' },
+  { hair: '#E84057', shirt: '#be123c', skin: '#FFE0BD' },
+  { hair: '#34D399', shirt: '#047857', skin: '#FFDAB9' },
+  { hair: '#FBBF24', shirt: '#b45309', skin: '#FFE0BD' },
+  { hair: '#A78BFA', shirt: '#7e22ce', skin: '#FFDAB9' },
+  { hair: '#2DD4BF', shirt: '#0f766e', skin: '#FFE0BD' },
+  { hair: '#818CF8', shirt: '#4338ca', skin: '#FFDAB9' },
+  { hair: '#38BDF8', shirt: '#0369a1', skin: '#FFE0BD' },
 ];
 
 const SIZE_MAP = {
-  sm: { box: 48, emoji: 20 },
-  md: { box: 64, emoji: 26 },
-  lg: { box: 80, emoji: 32 },
+  sm: { box: 48, sprite: 40 },
+  md: { box: 64, sprite: 52 },
+  lg: { box: 80, sprite: 64 },
 };
+
+/**
+ * Sprite path for real pixel art. Drop PNG files into public/sprites/ to override
+ * the CSS placeholder characters.
+ *
+ * File naming convention:
+ *   - player-0.png through player-7.png (one per color slot)
+ *   - player-human.png (optional, for the human player)
+ */
+function getSpritePath(colorIndex: number, isHuman: boolean): string {
+  if (isHuman) return '/sprites/player-human.png';
+  return `/sprites/player-${colorIndex}.png`;
+}
+
+/**
+ * CSS pixel-art character drawn with box-shadow.
+ * Acts as a fallback when sprite PNGs are not available.
+ */
+function PixelCharacter({ colorIndex, size }: { colorIndex: number; size: number }) {
+  const colors = PIXEL_COLORS[colorIndex % PIXEL_COLORS.length];
+  const px = Math.max(2, Math.floor(size / 16)); // pixel unit size
+
+  return (
+    <div style={{ width: size, height: size, position: 'relative', imageRendering: 'pixelated' }}>
+      {/* Head */}
+      <div
+        style={{
+          position: 'absolute',
+          top: px * 1,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: px * 6,
+          height: px * 6,
+          borderRadius: px,
+          background: colors.skin,
+        }}
+      />
+      {/* Hair */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: px * 7,
+          height: px * 3,
+          borderRadius: `${px}px ${px}px 0 0`,
+          background: colors.hair,
+        }}
+      />
+      {/* Eyes */}
+      <div
+        style={{
+          position: 'absolute',
+          top: px * 3,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: px * 4,
+          height: px,
+          display: 'flex',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={{ width: px, height: px, background: '#333', borderRadius: '50%' }} />
+        <div style={{ width: px, height: px, background: '#333', borderRadius: '50%' }} />
+      </div>
+      {/* Body / Shirt */}
+      <div
+        style={{
+          position: 'absolute',
+          top: px * 7,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: px * 8,
+          height: px * 5,
+          borderRadius: `${px}px ${px}px 0 0`,
+          background: colors.shirt,
+        }}
+      />
+      {/* Legs */}
+      <div
+        style={{
+          position: 'absolute',
+          top: px * 12,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: px,
+        }}
+      >
+        <div style={{ width: px * 3, height: px * 3, background: '#5C4A3A', borderRadius: `0 0 ${px}px ${px}px` }} />
+        <div style={{ width: px * 3, height: px * 3, background: '#5C4A3A', borderRadius: `0 0 ${px}px ${px}px` }} />
+      </div>
+    </div>
+  );
+}
 
 export default function PlayerAvatar({
   name,
@@ -57,7 +164,9 @@ export default function PlayerAvatar({
   const t = useTranslations();
   const dims = SIZE_MAP[size];
   const nameHash = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const bgColor = BG_COLORS[nameHash % BG_COLORS.length];
+  const colorIndex = nameHash % PIXEL_COLORS.length;
+  const [spriteError, setSpriteError] = useState(false);
+  const spritePath = getSpritePath(colorIndex, isHuman);
 
   return (
     <div
@@ -82,7 +191,7 @@ export default function PlayerAvatar({
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          background: bgColor,
+          background: 'rgba(15, 22, 40, 0.6)',
           opacity: isDead ? 0.3 : 1,
           filter: isDead ? 'grayscale(1)' : undefined,
           boxShadow: isSelected
@@ -91,11 +200,41 @@ export default function PlayerAvatar({
               ? '0 0 0 2px var(--accent-cyan)'
               : undefined,
           transition: 'all 0.2s',
+          overflow: 'hidden',
         }}
       >
-        <span style={{ fontSize: dims.emoji, lineHeight: 1 }}>
-          {showRole && role ? ROLE_EMOJI[role] : '😐'}
-        </span>
+        {/* Try real sprite first, fall back to CSS pixel character */}
+        {!spriteError ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={spritePath}
+            alt={name}
+            width={dims.sprite}
+            height={dims.sprite}
+            style={{ imageRendering: 'pixelated', objectFit: 'contain' }}
+            onError={() => setSpriteError(true)}
+          />
+        ) : (
+          <PixelCharacter colorIndex={colorIndex} size={dims.sprite} />
+        )}
+
+        {/* Role emoji overlay when showing role */}
+        {showRole && role && (
+          <span
+            style={{
+              position: 'absolute',
+              bottom: 2,
+              right: 2,
+              fontSize: size === 'sm' ? 12 : 16,
+              lineHeight: 1,
+              background: 'rgba(0,0,0,0.6)',
+              borderRadius: 4,
+              padding: '1px 2px',
+            }}
+          >
+            {ROLE_EMOJI[role]}
+          </span>
+        )}
 
         {isDead && (
           <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>

@@ -16,8 +16,9 @@
     "logout": "Sign Out",
     "guest": "Play as Guest",
     "subscribe": "Subscribe",
-    "free": "Free",
-    "premium": "Premium"
+    "free": "Free Trial",
+    "starter": "Pay to Go",
+    "monthly": "Monthly Pass"
   },
   "landing": {
     "heroTitle": "One Night Werewolf",
@@ -28,12 +29,21 @@
     "feature2Desc": "Beautiful retro visuals for an immersive experience",
     "feature3Title": "All Classic Roles",
     "feature3Desc": "Werewolf, Seer, Robber, Troublemaker, and more",
-    "subscribeTitle": "Go Premium",
-    "subscribeDesc": "Unlimited games, all roles, multiple AI providers",
-    "freeFeatures": "5 games/day • Basic roles • 1 AI provider",
-    "premiumFeatures": "Unlimited games • All roles • All AI providers • Custom API keys",
-    "premiumPrice": "$4.99/month",
-    "startFree": "Start Free"
+    "subscribeTitle": "Choose Your Plan",
+    "subscribeDesc": "Pick the plan that suits your playstyle",
+    "freeFeatures": "Try 1 free game",
+    "starterFeatures": "10 games total",
+    "starterPrice": "$5",
+    "monthlyFeatures": "200 games per month",
+    "monthlyPrice": "$20/month",
+    "startFree": "Play Free",
+    "buyStarter": "Buy Now",
+    "subscribeMonthly": "Subscribe",
+    "phaseSetup": "Setup",
+    "phaseNight": "Night",
+    "phaseDay": "Day",
+    "phaseVote": "Vote",
+    "phaseResult": "Result"
   },
   "setup": {
     "title": "Game Setup",
@@ -47,8 +57,14 @@
     "apiKey": "API Key (optional)",
     "apiKeyHint": "API key is required for AI to speak during discussion",
     "namePlaceholder": "Enter your name...",
+    "customName": "Custom",
     "nameRequired": "Enter your name to continue",
-    "rolesRemaining": "Select {count} more role(s)"
+    "rolesRemaining": "Select {count} more role(s)",
+    "noGamesRemaining": "No games remaining. Purchase more to continue playing!",
+    "gamesRemaining": "{count} games remaining",
+    "matchSummary": "Match Summary",
+    "roles": "Roles",
+    "defaultPlayerName": "Player"
   },
   "roles": {
     "werewolf": "Werewolf",
@@ -100,6 +116,8 @@
     "yourTurn": "Your turn to speak!",
     "isSpeaking": "is speaking...",
     "nextRound": "Next Round",
+    "finalRound": "Final round! Voting begins after this",
+    "roundInfo": "Round {current} / {max}",
     "proceedToVote": "Proceed to Vote",
     "vote": "Vote Phase",
     "voteDesc": "Who do you want to eliminate?",
@@ -130,11 +148,19 @@
     "teamVillage": "🏘️ Village Team",
     "teamSolo": "🪶 Solo",
     "teamUnknown": "🪞 Depends...",
+    "roleRevealTitle": "Role Reveal",
+    "roleRevealSubtitle": "The cards have been dealt...",
     "reasonNoWwNobodyDied": "No werewolves in play and nobody was killed. Village wins!",
     "reasonNoWwSomeoneDied": "No werewolves in play but someone was killed. Werewolf team wins!",
     "reasonWwKilled": "A werewolf was killed! Village wins!",
     "reasonNoWwKilled": "No werewolf was killed. Werewolf team wins!",
-    "reasonTannerAlsoWins": " Tanner also wins by getting killed!"
+    "reasonTannerAlsoWins": " Tanner also wins by getting killed!",
+    "selectedLabel": "Selected:",
+    "centerCardN": "Center #{num}",
+    "cardsSwapped": "Cards swapped!",
+    "noInfoRevealed": "No information revealed.",
+    "quitGame": "Quit Game",
+    "quitConfirm": "Are you sure you want to quit? Progress will be lost."
   },
   "achievements": {
     "title": "Achievements",
@@ -152,12 +178,19 @@
     "gold": "Gold",
     "platinum": "Platinum",
     "diamond": "Diamond",
-    "master": "Master",
-    "grandmaster": "Grandmaster",
-    "king": "King"
+    "superstar": "Superstar",
+    "king": "King",
+    "star": "Star",
+    "stars": "Stars",
+    "overallStats": "Overall",
+    "roleStats": "By Role",
+    "played": "Played",
+    "noRoleData": "Play some games to see role stats"
   },
   "settings": {
     "title": "Settings",
+    "general": "General",
+    "account": "Account",
     "language": "Language",
     "aiProvider": "AI Provider",
     "selectProvider": "Select Provider",

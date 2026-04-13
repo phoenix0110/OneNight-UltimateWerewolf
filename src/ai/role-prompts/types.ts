@@ -1,14 +1,9 @@
-import { RoleId } from '@/engine/roles';
-
 export interface RolePromptConfig {
-  role: RoleId;
+  role: string;
   identity: string;
+  gameLogicConstraints?: string[];
   teamObjective: string;
-  nightInfoUsage: string;
-  strategy: {
-    honestApproach: string;
-    deceptiveApproach: string;
-    decisionGuideline: string;
-  };
-  speechGuidelines: string;
+  nightInfoUsage: string | Record<string, string>;
+  strategy: Record<string, string | Record<string, string>>;
+  speechGuidelines: string | Record<string, string>;
 }

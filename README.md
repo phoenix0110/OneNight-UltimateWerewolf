@@ -1,30 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# One Night Ultimate Werewolf
 
-## Getting Started
+A web-based implementation of the classic social deduction game **One Night Ultimate Werewolf**, featuring AI opponents with distinct personalities. Built with Next.js and Firebase.
 
-First, run the development server:
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + React 19
+- **State Management**: Zustand
+- **Styling**: Tailwind CSS 4
+- **Internationalization**: next-intl (English / Chinese)
+- **Backend**: Firebase (Authentication, Firestore, Cloud Functions)
+- **Payments**: Lemon Squeezy (Merchant of Record)
+
+## Prerequisites
+
+- Node.js 20+
+- Firebase CLI (`npm install -g firebase-tools`)
+- A Firebase project with Authentication and Firestore enabled
+
+## Environment Setup
+
+Create a `.env.local` file in the project root:
+
+```env
+# Firebase
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Set to 'true' to use Firebase emulators instead of production
+NEXT_PUBLIC_USE_EMULATORS=true
+
+# Lemon Squeezy (payment processing)
+LEMONSQUEEZY_API_KEY=your_ls_api_key
+LEMONSQUEEZY_WEBHOOK_SECRET=your_ls_webhook_secret
+NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID=your_ls_store_id
+```
+
+## Local Development
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Start the Next.js dev server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app will be available at [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Start Firebase emulators (optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+If you want authentication and Firestore to work locally without a production Firebase project:
 
-## Learn More
+```bash
+firebase emulators:start
+```
 
-To learn more about Next.js, take a look at the following resources:
+This starts the following emulators (configured in `firebase.json`):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Service    | Port |
+|------------|------|
+| Auth       | 9099 |
+| Firestore  | 8080 |
+| Functions  | 5001 |
+| Hosting    | 5000 |
+| Emulator UI| auto |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Make sure `NEXT_PUBLIC_USE_EMULATORS=true` is set in `.env.local` so the app connects to local emulators instead of production Firebase.
 
-## Deploy on Vercel
+### 4. Linting
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run lint
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> **Note**: There is no automated test suite yet. Linting is the primary code quality check.
+
+## Deployment
+
+### Build the Next.js app
+
+```bash
+npm run build
+```
+
+### Deploy to Firebase
+
+The Firebase project ID is `onenight-werewolf-3dd14` (configured in `.firebaserc`).
+
+```bash
+firebase deploy
+```
+
+This deploys:
+
+- **Firestore rules** — from `firestore.rules`
+- **Firestore indexes** — from `firestore.indexes.json`
+- **Cloud Functions** — from `functions/` (predeploy automatically runs `lint` + `build`)
+- **Hosting** — from `public/`
+
+To deploy only specific services:
+
+```bash
+firebase deploy --only firestore           # rules + indexes
+firebase deploy --only functions           # cloud functions
+firebase deploy --only hosting             # static hosting
+```
+
+## Firebase Configuration
+
+| File                    | Purpose                                    |
+|-------------------------|--------------------------------------------|
+| `firebase.json`         | Emulator ports, hosting config, functions  |
+| `.firebaserc`           | Project alias mapping                      |
+| `firestore.rules`       | Firestore security rules                   |
+| `firestore.indexes.json`| Composite indexes                          |
+| `functions/`            | Cloud Functions source (TypeScript)        |
+
+## Project Structure
+
+```
+src/
+├── app/[locale]/          # Next.js pages (i18n routing)
+│   ├── page.tsx           # Landing page
+│   ├── game/              # Game pages
+│   ├── achievements/      # Rank & stats
+│   └── settings/          # User settings
+├── ai/                    # AI personality & prompt system
+├── components/game/       # Game UI components
+├── engine/                # Game logic (state, rules, night actions, voting)
+├── lib/                   # Firebase, auth, Firestore helpers, rank system
+├── messages/              # i18n translation files (en.json, zh.json)
+└── store/                 # Zustand game store
+```

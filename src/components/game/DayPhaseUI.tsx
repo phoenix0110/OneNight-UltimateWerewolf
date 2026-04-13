@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { MAX_DISCUSSION_ROUNDS } from '@/engine/game-rules';
 import { useGameStore } from '@/store/game-store';
 import DaySceneFrame from './DaySceneFrame';
 import DiscussionLogPanel from './DiscussionLogPanel';
@@ -14,6 +15,7 @@ export default function DayPhaseUI() {
   const runAIDiscussion = useGameStore((s) => s.runAIDiscussion);
   const submitHumanSpeech = useGameStore((s) => s.submitHumanSpeech);
   const proceedToVote = useGameStore((s) => s.proceedToVote);
+  const resetGame = useGameStore((s) => s.resetGame);
   const isProcessing = useGameStore((s) => s.isProcessing);
   const speakingOrder = useGameStore((s) => s.speakingOrder);
   const currentSpeakerIndex = useGameStore((s) => s.currentSpeakerIndex);
@@ -33,6 +35,8 @@ export default function DayPhaseUI() {
   const isHumanTurn = currentSpeaker?.isHuman === true;
   const roundComplete = currentSpeakerIndex >= speakingOrder.length;
   const thinkingPlayer = thinkingPlayerId !== null ? players.find((p) => p.id === thinkingPlayerId) ?? null : null;
+  const isLastRound = discussionRound >= MAX_DISCUSSION_ROUNDS;
+  const canStartNextRound = roundComplete && !isLastRound;
 
   // Auto-start discussion
   const startDiscussion = useCallback(() => {
@@ -96,13 +100,15 @@ export default function DayPhaseUI() {
             ? currentSpeaker.isHuman
               ? t('game.yourTurn')
               : `${currentSpeaker.name} ${t('game.isSpeaking')}`
-            : roundComplete
-              ? t('game.nextRound')
-              : undefined
+            : roundComplete && isLastRound
+              ? t('game.proceedToVote')
+              : roundComplete
+                ? t('game.nextRound')
+                : undefined
         }
         badge={
           <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 99 }}>
-            R{discussionRound + 1}
+            {t('game.roundInfo', { current: discussionRound, max: MAX_DISCUSSION_ROUNDS })}
           </span>
         }
       />
@@ -213,9 +219,28 @@ export default function DayPhaseUI() {
         </div>
       )}
 
+      {/* Final round notice */}
+      {roundComplete && isLastRound && (
+        <div style={{
+          margin: '0 16px 8px', padding: '8px 16px', borderRadius: 8, textAlign: 'center',
+          background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-red)' }}>
+            {t('game.finalRound')}
+          </span>
+        </div>
+      )}
+
       {/* Action Footer */}
       <div className="sticky-footer" style={{ display: 'flex', gap: 12, padding: 16 }}>
-        {roundComplete && (
+        <button
+          onClick={() => { if (window.confirm(t('game.quitConfirm'))) resetGame(); }}
+          className="btn btn-ghost"
+          style={{ fontSize: 13, padding: '0 12px', minWidth: 0, flexShrink: 0 }}
+        >
+          ✕
+        </button>
+        {canStartNextRound && (
           <button onClick={handleNextRound} className="btn btn-secondary" style={{ flex: 1, fontSize: 13 }}>
             🔄 {t('game.nextRound')}
           </button>

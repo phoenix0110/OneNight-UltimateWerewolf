@@ -27,15 +27,14 @@ Transform the role reveal phase into an **immersive ritual moment** where player
 
 ```
 ┌─────────────────────────────────────────┐
-│  🕯️                    🕯️               │  ← Wall sconces
+│  🕯️              👤              🕯️     │  ← Wall sconces, top player
 │                                         │
-│    👤              👤                   │  ← Players seated
-│       ╭──────────╮                      │     around table
-│  👤  │  🎴🎴🎴  │  👤                  │
-│       │   TABLE   │                     │  ← Center cards
-│    👤  ╰──────────╯  👤                 │
-│         (candle glow)                   │
-│              👤                         │  ← Human player
+│    👤        ╭──────────╮        👤     │  ← Symmetric seating
+│              │  🎴🎴🎴  │              │     around table
+│              │   TABLE   │              │  ← Center cards
+│    👤        ╰──────────╯        👤     │
+│              (candle glow)              │
+│              👤 ⭐                      │  ← Human player
 │                                         │     (bottom-center,
 │              [ROLE CARD]                │      highlighted)
 │                                         │
@@ -79,41 +78,64 @@ Transform the role reveal phase into an **immersive ritual moment** where player
 
 ### Layer 3: Primary Interaction Layer - "The Table"
 
-**Spatial Layout - Circular Seating:**
+**Spatial Layout - Symmetric Circular Seating:**
 
-Players arranged in a circle around the central table. Human player is always positioned at the bottom-center (closest to the viewer).
+All N players are placed at N evenly-spaced slots around the full circle (360°/N apart). Human player is always at slot 0 (bottom / 6 o'clock). Other players fill slots 1..N-1 going clockwise.
 
 ```
-                    Player 2
-                      👤
-                       
-    Player 3    ╭────────────╮    Player 1
-       👤      │  🎴  🎴  🎴  │      👤
-               │            │
-    Player 4   ╰────────────╯    Player 6 (AI)
-       👤                            👤
+6-Player Example (60° spacing):
+
+               Player 4 (270°)
+                    👤
+                     
+  Player 3 (210°)  ╭────────────╮  Player 5 (330°)
+       👤          │  🎴  🎴  🎴  │      👤
+                   │   TABLE    │
+  Player 2 (150°)  ╰────────────╯  Player 6 (30°)
+       👤                              👤
                
-              Player 5 (HUMAN)
-                 👤 ⭐
-                 
-              [ROLE CARD REVEAL]
+              Player 1 (HUMAN, 90°)
+                   👤 ⭐
+```
+
+```
+5-Player Example (72° spacing):
+
+             Player 4 (306°)
+                  👤
+                     
+  Player 3 (234°)  ╭────────────╮  
+       👤          │  🎴  🎴  🎴  │  Player 5 (18°)
+                   │   TABLE    │     👤
+  Player 2 (162°)  ╰────────────╯
+       👤                          
+               
+              Player 1 (HUMAN, 90°)
+                   👤 ⭐
 ```
 
 **Positioning Math:**
 
 ```typescript
-// Circular layout calculation
-const getPlayerPosition = (index: number, total: number, isHuman: boolean) => {
-  // Human player always at bottom (index 0 in visual order)
-  const visualIndex = isHuman ? 0 : (index <= humanIndex ? index + 1 : index);
-  const angle = (visualIndex / total) * 2 * Math.PI + Math.PI / 2; // Start from bottom
-  const radius = 140; // Distance from table center
-  
-  return {
-    x: 50 + (Math.cos(angle) * radius) / 3, // % positioning
-    y: 45 + (Math.sin(angle) * radius) / 3,
-  };
-};
+// Symmetric circular layout — all players evenly spaced
+function getPlayerPositions(players, humanPlayerIndex, isMobile) {
+  const total = players.length;
+  const radius = isMobile ? 100 : 130;
+  const nonHumans = players.filter(p => !p.isHuman);
+
+  return players.map((player) => {
+    // Human = slot 0 (bottom), others = slots 1..N-1 clockwise
+    const slot = player.isHuman ? 0 : nonHumans.indexOf(player) + 1;
+    const angle = Math.PI / 2 + (slot / total) * 2 * Math.PI;
+
+    return {
+      x: 50 + (Math.cos(angle) * radius) / 3, // % positioning
+      y: 50 + (Math.sin(angle) * radius) / 3,
+      angle,
+      isHuman: player.isHuman,
+    };
+  });
+}
 ```
 
 **Player Avatar States:**
@@ -329,14 +351,15 @@ interface CandlelightOverlayProps {
 - Simplified candle effects (performance)
 
 ```
-Mobile Layout:
+Mobile Layout (6 players, symmetric):
 
-    👤      👤      👤     ← Top arc (AI players)
+         👤                ← Top (270°)
+    👤        👤          ← Upper-left (210°), Upper-right (330°)
          ╭────╮
          │🎴🎴🎴│         ← Center
          ╰────╯
-            
-           👤 ⭐           ← Human (bottom)
+    👤        👤          ← Lower-left (150°), Lower-right (30°)
+         👤 ⭐            ← Human (90°, bottom)
            
         [ROLE CARD]
         
@@ -446,7 +469,7 @@ src/components/game/
 ## 12. Acceptance Criteria
 
 - [ ] 2D pixel tavern room background renders correctly
-- [ ] Players display in circular layout around table
+- [ ] Players display in symmetric circular layout around table (evenly spaced)
 - [ ] Human player is visually distinguished (size, glow, position)
 - [ ] Center cards visible on table
 - [ ] Role reveal card displays with role-appropriate glow

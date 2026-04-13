@@ -4,8 +4,9 @@ import { buildChatMessages, buildVoteChatMessages, parseVoteResponse } from '@/a
 import { BuiltInSpeech, fillTemplate, getBuiltInSpeeches } from '@/ai/built-in-speeches';
 import { AIPersonality, generatePersonalities } from '@/ai/personality';
 import { DiscussionContext } from '@/ai/prompts';
-import { sendAIMessage } from '@/ai/providers';
-import { ChatMessage, createInitialState, GameConfig, GameState } from '@/engine/game-state';
+import { AIRequestContext, sendAIMessage } from '@/ai/providers';
+import { ChatMessage, createInitialState, GameConfig, GameState, RevealedInfo } from '@/engine/game-state';
+import { MAX_DISCUSSION_ROUNDS } from '@/engine/game-rules';
 import { NightActionChoice, processAllNightActions, resolveNightAction } from '@/engine/night-actions';
 import { RoleId } from '@/engine/roles';
 import { generateAIVote, tallyVotes } from '@/engine/voting';
@@ -14,10 +15,11 @@ import { determineWinners, WinResult } from '@/engine/win-conditions';
 interface GameStore extends GameState {
   aiPersonalities: AIPersonality[];
   locale: string;
+  gameSessionId: string;
   winResult: WinResult | null;
   isProcessing: boolean;
   humanNightAction: NightActionChoice | null;
-  nightRevealed: { targetIndex: number; role: RoleId }[] | null;
+  nightRevealed: RevealedInfo[] | null;
   thinkingPlayerId: number | null;
 
   setLocale: (locale: string) => void;
@@ -72,6 +74,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   discussionRound: 0,
   aiPersonalities: [],
   locale: 'en',
+  gameSessionId: '',
   winResult: null,
   isProcessing: false,
   humanNightAction: null,
@@ -82,17 +85,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startGame: (config) => {
     const state = createInitialState(config);
-    const personalities = generatePersonalities(config.playerCount - 1);
+    const personalities = generatePersonalities(config.playerCount - 1, get().locale);
     const players = state.players.map((p, i) => {
       if (i === 0) return p;
       return { ...p, name: personalities[i - 1].name };
     });
+
+    const sessionId = `game_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     set({
       ...state,
       players,
       aiPersonalities: personalities,
       config,
+      gameSessionId: sessionId,
       winResult: null,
       isProcessing: false,
       humanNightAction: null,
@@ -188,9 +194,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     set({ thinkingPlayerId: playerIndex });
 
+    const aiContext: AIRequestContext = {
+      gameSessionId: state.gameSessionId,
+      playerName: player.name,
+      phase: 'discussion',
+    };
+
     try {
       const messages = buildChatMessages(state as GameState, context);
-      const response = await sendAIMessage(messages);
+      const response = await sendAIMessage(messages, aiContext);
 
       const message: ChatMessage = {
         playerId: player.id,
@@ -234,6 +246,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       await get().triggerAIChat(player.id, {
         speakingPosition: i,
         totalSpeakers: order.length,
+        currentRound: get().discussionRound,
+        maxRounds: MAX_DISCUSSION_ROUNDS,
       });
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
@@ -266,6 +280,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         (log) => log.actorIndex === player.id
       ) || null;
 
+      const aiContext: AIRequestContext = {
+        gameSessionId: state.gameSessionId,
+        playerName: player.name,
+        phase: 'vote',
+      };
+
       try {
         const messages = buildVoteChatMessages(state as GameState, {
           playerIndex: player.id,
@@ -273,7 +293,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           nightLog,
           locale: state.locale,
         });
-        const response = await sendAIMessage(messages);
+        const response = await sendAIMessage(messages, aiContext);
         const playerNames = state.players
           .filter((p) => p.id !== player.id)
           .map((p) => p.name);
@@ -318,6 +338,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       votes: {},
       killedPlayerIds: [],
       winners: [],
+      gameSessionId: '',
       winResult: null,
       isProcessing: false,
       humanNightAction: null,
@@ -338,9 +359,43 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   getFilledSpeech: (speech) => {
     const state = get();
+    const humanPlayer = state.players[state.humanPlayerIndex];
     const otherNames = state.players
       .filter((p) => !p.isHuman)
       .map((p) => p.name);
-    return fillTemplate(speech.template, otherNames);
+    const revealed = state.nightRevealed;
+
+    let nightTargetName: string | undefined;
+    let nightRoleName: string | undefined;
+
+    if (revealed && revealed.length > 0) {
+      if (revealed[0].isCenterCard) {
+        nightRoleName = revealed.map((r) => r.role).join(' & ');
+      } else {
+        const target = state.players.find((p) => p.id === revealed[0].targetIndex);
+        nightTargetName = target?.name;
+        nightRoleName = revealed[0].role;
+      }
+    }
+
+    let result = speech.template;
+
+    if (speech.category === 'claim' && nightTargetName) {
+      result = result.replace('{player}', nightTargetName);
+    }
+
+    const remaining = result.match(/\{player\}/g) || [];
+    const shuffled = [...otherNames].sort(() => Math.random() - 0.5);
+    remaining.forEach((_, i) => {
+      result = result.replace('{player}', shuffled[i % shuffled.length]);
+    });
+
+    if (nightRoleName) {
+      result = result.replace(/\{role\}/g, nightRoleName);
+    } else if (humanPlayer) {
+      result = result.replace(/\{role\}/g, humanPlayer.originalRole);
+    }
+
+    return result;
   },
 }));

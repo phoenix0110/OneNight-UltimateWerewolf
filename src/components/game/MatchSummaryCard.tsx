@@ -25,7 +25,7 @@ export default function MatchSummaryCard({
   return (
     <div className="panel-raised" style={{ padding: 16 }}>
       <h3 className="font-pixel" style={{ fontSize: 13, color: 'var(--accent-moon)', margin: '0 0 12px' }}>
-        Match Summary
+        {t('setup.matchSummary')}
       </h3>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 14 }}>
@@ -40,7 +40,7 @@ export default function MatchSummaryCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 18 }}>🃏</span>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Roles</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('setup.roles')}</div>
             <div style={{ fontWeight: 600, color: isComplete ? 'var(--accent-lime)' : 'var(--accent-orange)' }}>
               {selectedRoles.length}/{requiredRoles}
             </div>

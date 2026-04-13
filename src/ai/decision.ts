@@ -1,7 +1,7 @@
 import { GameState, NightActionLog } from '@/engine/game-state';
 
-import { AIPersonality, getPersonalityPrompt, getVotePersonalityPrompt } from './personality';
-import { buildDiscussionPrompt, buildSystemPrompt, buildVotePrompt, DiscussionContext } from './prompts';
+import { AIPersonality, getPersonalityPrompt, getPersonalityPromptCompact, getVotePersonalityPrompt } from './personality';
+import { buildDiscussionPrompt, buildReferenceRules, buildSystemPrompt, buildVotePrompt, buildVoteSystemPrompt, DiscussionContext } from './prompts';
 import { ChatMessage as ProviderChatMessage } from './providers';
 
 interface AIContext {
@@ -17,7 +17,11 @@ export function buildChatMessages(
   context: AIContext
 ): ProviderChatMessage[] {
   const player = state.players[context.playerIndex];
-  const personalityPrompt = getPersonalityPrompt(context.personality);
+  const isFirstRound = !context.discussionContext?.currentRound || context.discussionContext.currentRound <= 1;
+
+  const personalityPrompt = isFirstRound
+    ? getPersonalityPrompt(context.personality)
+    : getPersonalityPromptCompact(context.personality);
 
   const systemMsg = buildSystemPrompt(
     player.originalRole,
@@ -30,12 +34,15 @@ export function buildChatMessages(
     text: m.text,
   }));
 
+  const referenceRules = isFirstRound ? buildReferenceRules(player.originalRole) : undefined;
+
   const userMsg = buildDiscussionPrompt(
     context.nightLog,
     chatHistory,
     player.currentRole,
     player.originalRole,
-    context.discussionContext
+    context.discussionContext,
+    referenceRules,
   );
 
   return [
@@ -49,12 +56,11 @@ export function buildVoteChatMessages(
   context: AIContext
 ): ProviderChatMessage[] {
   const player = state.players[context.playerIndex];
-  const personalityPrompt = getPersonalityPrompt(context.personality);
   const votePersonalityPrompt = getVotePersonalityPrompt(context.personality);
 
-  const systemMsg = buildSystemPrompt(
+  const systemMsg = buildVoteSystemPrompt(
     player.originalRole,
-    personalityPrompt,
+    player.name,
     context.locale
   );
 

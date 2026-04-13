@@ -68,29 +68,19 @@ export default function NightPhaseUI() {
 
   const toggleTarget = (id: number) => {
     const max = role === 'troublemaker' ? 2 : 1;
-    if (selectedTargets.includes(id)) setSelectedTargets(selectedTargets.filter((t) => t !== id));
-    else if (selectedTargets.length < max) setSelectedTargets([...selectedTargets, id]);
+    if (selectedTargets.includes(id)) {
+      setSelectedTargets(selectedTargets.filter((t) => t !== id));
+    } else if (max === 1) {
+      setSelectedTargets([id]);
+    } else if (selectedTargets.length < max) {
+      setSelectedTargets([...selectedTargets, id]);
+    }
   };
 
   const toggleCenter = (idx: number) => {
     const max = role === 'seer' ? 2 : 1;
     if (selectedCenter.includes(idx)) setSelectedCenter(selectedCenter.filter((c) => c !== idx));
     else if (selectedCenter.length < max) setSelectedCenter([...selectedCenter, idx]);
-  };
-
-  const getRoleInstruction = () => {
-    switch (role) {
-      case 'werewolf': return 'Look for other werewolves...';
-      case 'seer': return 'View a player\'s card or two center cards';
-      case 'robber': return 'Swap your card with another player\'s card';
-      case 'troublemaker': return 'Swap two other players\' cards';
-      case 'insomniac': return 'Check your card at the end of the night...';
-      case 'drunk': return 'Swap your card with a center card (without looking)';
-      case 'minion': return 'See who the werewolves are...';
-      case 'mason': return 'See the other mason...';
-      case 'doppelganger': return 'Choose a player to copy their role';
-      default: return 'You have no action tonight.';
-    }
   };
 
   return (
@@ -105,7 +95,7 @@ export default function NightPhaseUI() {
             {t(`roles.${role}`)}
           </div>
           <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 8 }}>
-            {getRoleInstruction()}
+            {t(`roles.${role}Desc`)}
           </div>
         </div>
 
@@ -200,17 +190,17 @@ export default function NightPhaseUI() {
             {['werewolf', 'insomniac', 'minion', 'mason'].includes(role) && (
               <div className="panel" style={{ padding: 16, textAlign: 'center' }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>👁️</div>
-                <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{getRoleInstruction()}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{t(`roles.${role}Desc`)}</div>
               </div>
             )}
 
             {/* Selection summary */}
             {(selectedTargets.length > 0 || selectedCenter.length > 0) && (
               <div className="panel anim-fade-in-up" style={{ padding: 12, textAlign: 'center' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Selected: </span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('game.selectedLabel')} </span>
                 <span style={{ fontSize: 14, color: 'var(--accent-cyan)', fontWeight: 600 }}>
                   {selectedTargets.map((id) => players.find((p) => p.id === id)?.name).filter(Boolean).join(', ')}
-                  {selectedCenter.map((idx) => `Center #${idx + 1}`).join(', ')}
+                  {selectedCenter.map((idx) => t('game.centerCardN', { num: idx + 1 })).join(', ')}
                 </span>
               </div>
             )}
@@ -226,15 +216,15 @@ export default function NightPhaseUI() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {nightRevealed.map((r, i) => (
                   <div key={i} style={{ fontSize: 14, color: 'var(--accent-cyan)' }}>
-                    {typeof r.targetIndex === 'number' && players[r.targetIndex]
-                      ? `${players[r.targetIndex].name}: ${t(`roles.${r.role}`)}`
-                      : `Center card: ${t(`roles.${r.role}`)}`}
+                    {r.isCenterCard
+                      ? `${t('game.centerCardN', { num: r.targetIndex + 1 })}: ${t(`roles.${r.role}`)}`
+                      : `${players[r.targetIndex]?.name ?? '???'}: ${t(`roles.${r.role}`)}`}
                   </div>
                 ))}
               </div>
             ) : (
               <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                {role === 'troublemaker' ? 'Cards swapped!' : 'No information revealed.'}
+                {role === 'troublemaker' ? t('game.cardsSwapped') : t('game.noInfoRevealed')}
               </div>
             )}
           </div>

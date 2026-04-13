@@ -29,8 +29,8 @@ export function calculateRequiredRoles(playerCount: number): number {
 }
 
 // ─── Discussion ──────────────────────────────────────────────────────
-/** Number of discussion rounds before voting */
-export const DISCUSSION_ROUNDS = 1;
+/** Maximum number of discussion rounds before forced voting */
+export const MAX_DISCUSSION_ROUNDS = 3;
 
 // ─── Default Role Presets ────────────────────────────────────────────
 /**

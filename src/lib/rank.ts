@@ -1,47 +1,125 @@
-export interface RankInfo {
+export interface RankTier {
   id: string;
-  nameKey: string; // i18n key
-  tier?: number;
-  minPoints: number;
-  maxPoints: number;
+  nameKey: string;
   color: string;
   emoji: string;
 }
 
-export const RANKS: RankInfo[] = [
-  { id: 'bronze_1', nameKey: 'achievements.bronze', tier: 1, minPoints: 0, maxPoints: 10, color: '#cd7f32', emoji: '🥉' },
-  { id: 'silver_1', nameKey: 'achievements.silver', tier: 1, minPoints: 11, maxPoints: 25, color: '#c0c0c0', emoji: '⚪' },
-  { id: 'silver_2', nameKey: 'achievements.silver', tier: 2, minPoints: 26, maxPoints: 40, color: '#c0c0c0', emoji: '⚪' },
-  { id: 'silver_3', nameKey: 'achievements.silver', tier: 3, minPoints: 41, maxPoints: 60, color: '#c0c0c0', emoji: '⚪' },
-  { id: 'gold_1', nameKey: 'achievements.gold', tier: 1, minPoints: 61, maxPoints: 90, color: '#ffd700', emoji: '🥇' },
-  { id: 'gold_2', nameKey: 'achievements.gold', tier: 2, minPoints: 91, maxPoints: 120, color: '#ffd700', emoji: '🥇' },
-  { id: 'gold_3', nameKey: 'achievements.gold', tier: 3, minPoints: 121, maxPoints: 150, color: '#ffd700', emoji: '🥇' },
-  { id: 'platinum_1', nameKey: 'achievements.platinum', tier: 1, minPoints: 151, maxPoints: 200, color: '#00e5ff', emoji: '💎' },
-  { id: 'platinum_2', nameKey: 'achievements.platinum', tier: 2, minPoints: 201, maxPoints: 250, color: '#00e5ff', emoji: '💎' },
-  { id: 'platinum_3', nameKey: 'achievements.platinum', tier: 3, minPoints: 251, maxPoints: 300, color: '#00e5ff', emoji: '💎' },
-  { id: 'diamond_1', nameKey: 'achievements.diamond', tier: 1, minPoints: 301, maxPoints: 400, color: '#b9f2ff', emoji: '💠' },
-  { id: 'diamond_2', nameKey: 'achievements.diamond', tier: 2, minPoints: 401, maxPoints: 500, color: '#b9f2ff', emoji: '💠' },
-  { id: 'diamond_3', nameKey: 'achievements.diamond', tier: 3, minPoints: 501, maxPoints: 750, color: '#b9f2ff', emoji: '💠' },
-  { id: 'master', nameKey: 'achievements.master', minPoints: 751, maxPoints: 1000, color: '#9c27b0', emoji: '👑' },
-  { id: 'grandmaster', nameKey: 'achievements.grandmaster', minPoints: 1001, maxPoints: 1500, color: '#f44336', emoji: '🔥' },
-  { id: 'king', nameKey: 'achievements.king', minPoints: 1500, maxPoints: Infinity, color: '#ff6f00', emoji: '🏆' },
+export interface RankSubLevel {
+  id: string;
+  tier: RankTier;
+  subRank: number; // 3=III, 2=II, 1=I (lower number = higher sub-rank)
+  starsToPromote: number;
+  cumulativeStarsAtStart: number;
+}
+
+export interface RankPosition {
+  subLevel: RankSubLevel;
+  currentStars: number; // stars earned within this sub-level (0..starsToPromote-1, or 0..N for King)
+  totalStars: number;
+}
+
+const TIERS: RankTier[] = [
+  { id: 'bronze', nameKey: 'achievements.bronze', color: '#cd7f32', emoji: '🥉' },
+  { id: 'silver', nameKey: 'achievements.silver', color: '#c0c0c0', emoji: '⚪' },
+  { id: 'gold', nameKey: 'achievements.gold', color: '#ffd700', emoji: '🥇' },
+  { id: 'platinum', nameKey: 'achievements.platinum', color: '#00e5ff', emoji: '💎' },
+  { id: 'diamond', nameKey: 'achievements.diamond', color: '#b9f2ff', emoji: '💠' },
+  { id: 'superstar', nameKey: 'achievements.superstar', color: '#9c27b0', emoji: '🌟' },
+  { id: 'king', nameKey: 'achievements.king', color: '#ff6f00', emoji: '👑' },
 ];
 
-export function getRankInfo(rankId: string): RankInfo {
-  return RANKS.find((r) => r.id === rankId) || RANKS[0];
+interface SubRankDef {
+  tierId: string;
+  subRanks: number[]; // e.g. [3,2,1] for III, II, I
+  starsPerSub: number;
 }
 
-export function getRankForPoints(points: number): RankInfo {
-  for (let i = RANKS.length - 1; i >= 0; i--) {
-    if (points >= RANKS[i].minPoints) return RANKS[i];
+const SUB_RANK_DEFS: SubRankDef[] = [
+  { tierId: 'bronze', subRanks: [3, 2, 1], starsPerSub: 3 },
+  { tierId: 'silver', subRanks: [3, 2, 1], starsPerSub: 3 },
+  { tierId: 'gold', subRanks: [3, 2, 1], starsPerSub: 4 },
+  { tierId: 'platinum', subRanks: [3, 2, 1], starsPerSub: 4 },
+  { tierId: 'diamond', subRanks: [3, 2, 1], starsPerSub: 4 },
+  { tierId: 'superstar', subRanks: [3, 2, 1], starsPerSub: 5 },
+];
+
+// Build the flat list of sub-levels with cumulative star thresholds
+const SUB_LEVELS: RankSubLevel[] = [];
+let cumulative = 0;
+
+for (const def of SUB_RANK_DEFS) {
+  const tier = TIERS.find((t) => t.id === def.tierId)!;
+  for (const sub of def.subRanks) {
+    SUB_LEVELS.push({
+      id: `${def.tierId}_${sub}`,
+      tier,
+      subRank: sub,
+      starsToPromote: def.starsPerSub,
+      cumulativeStarsAtStart: cumulative,
+    });
+    cumulative += def.starsPerSub;
   }
-  return RANKS[0];
 }
 
-export function getRankProgress(points: number): number {
-  const rank = getRankForPoints(points);
-  if (rank.maxPoints === Infinity) return 100;
-  const range = rank.maxPoints - rank.minPoints;
-  const progress = points - rank.minPoints;
-  return Math.min(100, Math.round((progress / range) * 100));
+// King has no sub-ranks — stars are uncapped
+const KING_TIER = TIERS.find((t) => t.id === 'king')!;
+const KING_THRESHOLD = cumulative; // total stars needed to reach King
+
+const KING_SUB_LEVEL: RankSubLevel = {
+  id: 'king',
+  tier: KING_TIER,
+  subRank: 0,
+  starsToPromote: Infinity,
+  cumulativeStarsAtStart: KING_THRESHOLD,
+};
+
+export function getRankPosition(totalStars: number): RankPosition {
+  if (totalStars >= KING_THRESHOLD) {
+    return {
+      subLevel: KING_SUB_LEVEL,
+      currentStars: totalStars - KING_THRESHOLD,
+      totalStars,
+    };
+  }
+
+  for (let i = SUB_LEVELS.length - 1; i >= 0; i--) {
+    if (totalStars >= SUB_LEVELS[i].cumulativeStarsAtStart) {
+      return {
+        subLevel: SUB_LEVELS[i],
+        currentStars: totalStars - SUB_LEVELS[i].cumulativeStarsAtStart,
+        totalStars,
+      };
+    }
+  }
+
+  return { subLevel: SUB_LEVELS[0], currentStars: 0, totalStars: 0 };
 }
+
+export function getRankId(totalStars: number): string {
+  return getRankPosition(totalStars).subLevel.id;
+}
+
+export function addStar(totalStars: number): number {
+  return totalStars + 1;
+}
+
+export function removeStar(totalStars: number): number {
+  return Math.max(0, totalStars - 1);
+}
+
+export function getSubRankLabel(subRank: number): string {
+  if (subRank === 0) return '';
+  const labels: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III' };
+  return labels[subRank] || '';
+}
+
+export function formatRankDisplay(position: RankPosition): string {
+  const sub = getSubRankLabel(position.subLevel.subRank);
+  if (position.subLevel.id === 'king') {
+    return `${position.currentStars}`;
+  }
+  return sub;
+}
+
+export { TIERS, SUB_LEVELS, KING_THRESHOLD, KING_SUB_LEVEL };
