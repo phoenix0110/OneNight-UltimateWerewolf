@@ -1,22 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 
-const FEATURES = [
-  { icon: '🤖', titleKey: 'landing.feature1Title', descKey: 'landing.feature1Desc' },
-  { icon: '🎨', titleKey: 'landing.feature2Title', descKey: 'landing.feature2Desc' },
-  { icon: '🃏', titleKey: 'landing.feature3Title', descKey: 'landing.feature3Desc' },
-] as const;
-
 const PHASES = [
-  { icon: '⚙️', label: 'Setup' },
-  { icon: '🌙', label: 'Night' },
-  { icon: '☀️', label: 'Day' },
-  { icon: '🗳️', label: 'Vote' },
-  { icon: '🏆', label: 'Result' },
+  { icon: '⚙️', labelKey: 'landing.phaseSetup' },
+  { icon: '🌙', labelKey: 'landing.phaseNight' },
+  { icon: '☀️', labelKey: 'landing.phaseDay' },
+  { icon: '🗳️', labelKey: 'landing.phaseVote' },
+  { icon: '🏆', labelKey: 'landing.phaseResult' },
 ] as const;
 
 export default function LandingPage() {
@@ -25,6 +20,7 @@ export default function LandingPage() {
   const params = useParams();
   const locale = params.locale as string;
   const { user, signInWithGoogle, signOut } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' }}>
@@ -36,11 +32,15 @@ export default function LandingPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <LanguageToggle />
           {user ? (
-            <button onClick={signOut} className="btn btn-ghost" style={{ fontSize: 12 }} title={user.displayName || ''}>
+            <button onClick={signOut} className="btn btn-ghost" style={{ fontSize: 12, minHeight: 36, padding: '6px 12px' }} title={user.displayName || ''}>
               {user.displayName?.split(' ')[0] || t('common.logout')}
             </button>
           ) : (
-            <button onClick={signInWithGoogle} className="btn btn-ghost" style={{ fontSize: 12 }}>
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="btn btn-ghost"
+              style={{ fontSize: 12, minHeight: 36, padding: '6px 12px' }}
+            >
               {t('common.login')}
             </button>
           )}
@@ -82,29 +82,14 @@ export default function LandingPage() {
           </button>
         </div>
 
-        {/* ── Feature cards ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 640, width: '100%', margin: '0 auto 48px' }}>
-          {FEATURES.map((f) => (
-            <div key={f.titleKey} className="panel" style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
-              <div style={{ color: 'var(--accent-cyan)', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-                {t(f.titleKey)}
-              </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.5 }}>
-                {t(f.descKey)}
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* ── Phase timeline ── */}
         <div style={{ width: '100%', maxWidth: 480, margin: '0 auto 48px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
             {PHASES.map((phase, i) => (
-              <div key={phase.label} style={{ display: 'flex', alignItems: 'center' }}>
+              <div key={phase.labelKey} style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <span style={{ fontSize: 20, marginBottom: 4 }}>{phase.icon}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{phase.label}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t(phase.labelKey)}</span>
                 </div>
                 {i < PHASES.length - 1 && (
                   <div style={{ width: 32, height: 1, background: 'var(--border-default)', margin: '0 6px', marginTop: -12 }} />
@@ -114,8 +99,8 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* ── Subscription (de-prioritized) ── */}
-        <section style={{ width: '100%', maxWidth: 520, margin: '0 auto 48px' }}>
+        {/* ── Pricing ── */}
+        <section style={{ width: '100%', maxWidth: 640, margin: '0 auto 48px' }}>
           <h2 className="font-pixel" style={{ fontSize: 13, color: 'var(--accent-orange)', marginBottom: 12 }}>
             {t('landing.subscribeTitle')}
           </h2>
@@ -123,30 +108,66 @@ export default function LandingPage() {
             {t('landing.subscribeDesc')}
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {/* Free */}
-            <div className="panel" style={{ padding: 20 }}>
-              <div style={{ color: 'var(--accent-lime)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t('common.free')}</div>
-              <div style={{ color: 'var(--accent-moon)', fontSize: 24, fontWeight: 700, marginBottom: 8 }}>$0</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            {/* Free Trial */}
+            <div className="panel" style={{ padding: 16 }}>
+              <div style={{ color: 'var(--accent-lime)', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{t('common.free')}</div>
+              <div style={{ color: 'var(--accent-moon)', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>$0</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
                 {t('landing.freeFeatures')}
               </div>
-              <button onClick={() => router.push(`/${locale}/game`)} className="btn btn-secondary" style={{ width: '100%', fontSize: 13 }}>
+              <button onClick={() => router.push(`/${locale}/game`)} className="btn btn-secondary" style={{ width: '100%', fontSize: 12 }}>
                 {t('landing.startFree')}
               </button>
             </div>
 
-            {/* Premium */}
-            <div className="panel" style={{ padding: 20, borderColor: 'rgba(246,211,101,0.4)', boxShadow: '0 0 0 1px rgba(246,211,101,0.2)' }}>
-              <div style={{ color: 'var(--accent-moon)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t('common.premium')}</div>
-              <div style={{ color: 'var(--accent-moon)', fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
-                {t('landing.premiumPrice')}
+            {/* Pay to Go */}
+            <div className="panel" style={{ padding: 16, borderColor: 'rgba(89,208,255,0.4)', boxShadow: '0 0 0 1px rgba(89,208,255,0.15)' }}>
+              <div style={{ color: 'var(--accent-cyan)', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{t('common.starter')}</div>
+              <div style={{ color: 'var(--accent-moon)', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
+                {t('landing.starterPrice')}
               </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
-                {t('landing.premiumFeatures')}
+              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
+                {t('landing.starterFeatures')}
               </div>
-              <button className="btn btn-success" style={{ width: '100%', fontSize: 13 }}>
-                {t('common.subscribe')}
+              <button
+                onClick={() => {
+                  const storeId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID;
+                  if (storeId) {
+                    window.open(`https://${storeId}.lemonsqueezy.com`, '_blank');
+                  } else {
+                    alert('Payment is not configured yet. Please set NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID.');
+                  }
+                }}
+                className="btn btn-success"
+                style={{ width: '100%', fontSize: 12 }}
+              >
+                {t('landing.buyStarter')}
+              </button>
+            </div>
+
+            {/* Monthly Pass */}
+            <div className="panel" style={{ padding: 16, borderColor: 'rgba(246,211,101,0.4)', boxShadow: '0 0 0 1px rgba(246,211,101,0.2)' }}>
+              <div style={{ color: 'var(--accent-moon)', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{t('common.monthly')}</div>
+              <div style={{ color: 'var(--accent-moon)', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
+                {t('landing.monthlyPrice')}
+              </div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
+                {t('landing.monthlyFeatures')}
+              </div>
+              <button
+                onClick={() => {
+                  const storeId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID;
+                  if (storeId) {
+                    window.open(`https://${storeId}.lemonsqueezy.com`, '_blank');
+                  } else {
+                    alert('Payment is not configured yet. Please set NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID.');
+                  }
+                }}
+                className="btn btn-success"
+                style={{ width: '100%', fontSize: 12 }}
+              >
+                {t('landing.subscribeMonthly')}
               </button>
             </div>
           </div>
@@ -154,7 +175,7 @@ export default function LandingPage() {
       </main>
 
       {/* ── Footer ── */}
-      <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 16 }}>
+      <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <button
           onClick={() => router.push(`/${locale}/achievements`)}
           style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', transition: 'color 0.15s' }}
@@ -163,15 +184,36 @@ export default function LandingPage() {
         >
           {t('common.achievements')}
         </button>
-        <button
-          onClick={() => router.push(`/${locale}/settings`)}
-          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', transition: 'color 0.15s' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-cyan)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-        >
-          {t('common.settings')}
-        </button>
       </footer>
+
+      {/* ── Login Modal ── */}
+      {showLoginModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          onClick={() => setShowLoginModal(false)}
+        >
+          <div
+            className="panel-raised"
+            style={{ padding: 32, textAlign: 'center', maxWidth: 340, width: '90%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 28, marginBottom: 16 }}>🐺</div>
+            <h2 className="font-pixel" style={{ fontSize: 16, color: 'var(--accent-moon)', marginBottom: 8 }}>
+              {t('common.login')}
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>
+              {t('achievements.loginRequired')}
+            </p>
+            <button
+              onClick={() => { signInWithGoogle(); setShowLoginModal(false); }}
+              className="btn btn-success"
+              style={{ width: '100%', fontSize: 14 }}
+            >
+              {t('common.loginWithGoogle')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

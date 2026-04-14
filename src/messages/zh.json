@@ -16,8 +16,9 @@
     "logout": "退出登录",
     "guest": "游客模式",
     "subscribe": "订阅",
-    "free": "免费版",
-    "premium": "高级版"
+    "free": "免费试玩",
+    "starter": "入门版",
+    "monthly": "畅玩版"
   },
   "landing": {
     "heroTitle": "一夜狼人杀",
@@ -28,12 +29,21 @@
     "feature2Desc": "精美复古画面，沉浸式体验",
     "feature3Title": "经典角色",
     "feature3Desc": "狼人、预言家、强盗、捣蛋鬼等全部角色",
-    "subscribeTitle": "升级高级版",
-    "subscribeDesc": "无限游戏次数，全部角色，多种AI供应商",
-    "freeFeatures": "每天5局 • 基础角色 • 1个AI供应商",
-    "premiumFeatures": "无限游戏 • 全部角色 • 全部AI供应商 • 自定义API密钥",
-    "premiumPrice": "¥34.99/月",
-    "startFree": "免费开始"
+    "subscribeTitle": "选择你的方案",
+    "subscribeDesc": "选择适合你的玩法",
+    "freeFeatures": "免费试玩1局",
+    "starterFeatures": "共10局游戏",
+    "starterPrice": "$5",
+    "monthlyFeatures": "每月200局游戏",
+    "monthlyPrice": "$20/月",
+    "startFree": "免费试玩",
+    "buyStarter": "立即购买",
+    "subscribeMonthly": "订阅",
+    "phaseSetup": "设置",
+    "phaseNight": "夜晚",
+    "phaseDay": "白天",
+    "phaseVote": "投票",
+    "phaseResult": "结果"
   },
   "setup": {
     "title": "游戏设置",
@@ -47,8 +57,14 @@
     "apiKey": "API 密钥（可选）",
     "apiKeyHint": "需要 API 密钥才能让 AI 在讨论中发言",
     "namePlaceholder": "输入你的名字...",
+    "customName": "自定义",
     "nameRequired": "请输入你的名字",
-    "rolesRemaining": "还需选择 {count} 个角色"
+    "rolesRemaining": "还需选择 {count} 个角色",
+    "noGamesRemaining": "游戏次数已用完，请购买更多次数继续游戏！",
+    "gamesRemaining": "剩余 {count} 局",
+    "matchSummary": "对局概览",
+    "roles": "角色",
+    "defaultPlayerName": "玩家"
   },
   "roles": {
     "werewolf": "狼人",
@@ -100,6 +116,8 @@
     "yourTurn": "轮到你发言！",
     "isSpeaking": "正在发言...",
     "nextRound": "下一轮",
+    "finalRound": "最后一轮讨论！之后将进入投票",
+    "roundInfo": "第 {current} / {max} 轮",
     "proceedToVote": "进入投票",
     "vote": "投票阶段",
     "voteDesc": "你想淘汰谁？",
@@ -130,11 +148,19 @@
     "teamVillage": "🏘️ 好人阵营",
     "teamSolo": "🪶 独立阵营",
     "teamUnknown": "🪞 取决于复制的角色...",
+    "roleRevealTitle": "身份揭示",
+    "roleRevealSubtitle": "命运的牌已经发出...",
     "reasonNoWwNobodyDied": "场上没有狼人，也没有人被淘汰。好人阵营获胜！",
     "reasonNoWwSomeoneDied": "场上没有狼人，但有人被淘汰了。狼人阵营获胜！",
     "reasonWwKilled": "狼人被淘汰了！好人阵营获胜！",
     "reasonNoWwKilled": "没有狼人被淘汰。狼人阵营获胜！",
-    "reasonTannerAlsoWins": "皮匠也因为被淘汰而获胜！"
+    "reasonTannerAlsoWins": "皮匠也因为被淘汰而获胜！",
+    "selectedLabel": "已选择：",
+    "centerCardN": "底牌 #{num}",
+    "cardsSwapped": "身份牌已交换！",
+    "noInfoRevealed": "没有信息被揭示。",
+    "quitGame": "退出游戏",
+    "quitConfirm": "确定要退出吗？游戏进度将丢失。"
   },
   "achievements": {
     "title": "成就系统",
@@ -152,12 +178,19 @@
     "gold": "黄金",
     "platinum": "铂金",
     "diamond": "钻石",
-    "master": "大师",
-    "grandmaster": "宗师",
-    "king": "王者"
+    "superstar": "星耀",
+    "king": "王者",
+    "star": "星",
+    "stars": "星",
+    "overallStats": "总览",
+    "roleStats": "角色统计",
+    "played": "场",
+    "noRoleData": "玩几局游戏后即可查看角色统计"
   },
   "settings": {
     "title": "设置",
+    "general": "通用",
+    "account": "账户",
     "language": "语言",
     "aiProvider": "AI 供应商",
     "selectProvider": "选择供应商",

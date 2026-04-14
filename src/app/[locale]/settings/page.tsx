@@ -29,12 +29,12 @@ export default function SettingsPage() {
         {/* General Settings */}
         <section>
           <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-            General
+            {t('settings.general')}
           </h2>
 
           {/* Account */}
           <div className="panel" style={{ padding: 16, marginBottom: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-moon)', marginBottom: 12 }}>Account</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-moon)', marginBottom: 12 }}>{t('settings.account')}</div>
             {user ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

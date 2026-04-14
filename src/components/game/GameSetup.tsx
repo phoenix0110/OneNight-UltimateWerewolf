@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/game-store';
@@ -11,8 +11,19 @@ import {
   DEFAULT_ROLE_CONFIGS,
   PLAYER_COUNT_OPTIONS,
 } from '@/engine/game-rules';
+import { useAuth } from '@/lib/auth-context';
+import { canStartGame, consumeGame } from '@/lib/firestore';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import MatchSummaryCard from './MatchSummaryCard';
+
+/** Preset player name lists — 10 per locale. */
+const PRESET_NAMES: Record<string, string[]> = {
+  zh: ['云中君', '夜未央', '风临尘', '月无痕', '星落辰', '霜凝雪', '墨飞白', '烟如织', '雨听禅', '花照影'],
+  en: ['Sam', 'Max', 'Charlie', 'Jamie', 'Robin', 'Avery', 'Taylor', 'Kai', 'Skyler', 'River'],
+};
+
+/** Sentinel value indicating "custom name" mode. */
+const CUSTOM_KEY = '__custom__';
 
 export default function GameSetup() {
   const t = useTranslations();
@@ -20,11 +31,28 @@ export default function GameSetup() {
   const params = useParams();
   const locale = params.locale as string;
 
+  const { user } = useAuth();
   const startGame = useGameStore((s) => s.startGame);
   const setLocale = useGameStore((s) => s.setLocale);
 
-  const [playerName, setPlayerName] = useState('');
-  const [playerCount, setPlayerCount] = useState(PLAYER_COUNT_OPTIONS[0]);
+  const [gamesRemaining, setGamesRemaining] = useState<number | null>(null);
+  const [noGames, setNoGames] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    canStartGame(user.uid).then(({ allowed, gamesRemaining: remaining }) => {
+      setGamesRemaining(remaining);
+      setNoGames(!allowed);
+    });
+  }, [user]);
+
+  const nameList = PRESET_NAMES[locale] ?? PRESET_NAMES.en;
+  const [selectedNameKey, setSelectedNameKey] = useState(nameList[0]); // default = first preset name
+  const [customName, setCustomName] = useState('');
+  const isCustom = selectedNameKey === CUSTOM_KEY;
+  const playerName = isCustom ? customName : selectedNameKey;
+
+  const [playerCount, setPlayerCount] = useState<number>(PLAYER_COUNT_OPTIONS[0]);
   const [selectedRoles, setSelectedRoles] = useState<RoleId[]>([...DEFAULT_ROLE_CONFIGS[PLAYER_COUNT_OPTIONS[0]]]);
 
   const requiredRoles = calculateRequiredRoles(playerCount);
@@ -51,9 +79,17 @@ export default function GameSetup() {
 
   const canStart = selectedRoles.length === requiredRoles && playerName.trim();
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    if (user) {
+      const consumed = await consumeGame(user.uid);
+      if (!consumed) {
+        setNoGames(true);
+        return;
+      }
+      setGamesRemaining((prev) => (prev !== null ? Math.max(0, prev - 1) : prev));
+    }
     setLocale(locale);
-    startGame({ playerCount, playerName: playerName.trim() || 'Player', roles: selectedRoles });
+    startGame({ playerCount, playerName: playerName.trim() || t('setup.defaultPlayerName'), roles: selectedRoles });
   };
 
   return (
@@ -76,13 +112,39 @@ export default function GameSetup() {
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
             {t('setup.playerName')}
           </label>
-          <input
-            type="text"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            className="input"
-            placeholder={t('setup.namePlaceholder')}
-          />
+
+          {/* Preset name grid */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+            {nameList.map((name) => (
+              <button
+                key={name}
+                onClick={() => setSelectedNameKey(name)}
+                className={`btn ${selectedNameKey === name ? 'btn-success' : 'btn-secondary'}`}
+                style={{ fontSize: 13, padding: '6px 14px', minHeight: 36 }}
+              >
+                {name}
+              </button>
+            ))}
+            <button
+              onClick={() => setSelectedNameKey(CUSTOM_KEY)}
+              className={`btn ${isCustom ? 'btn-success' : 'btn-secondary'}`}
+              style={{ fontSize: 13, padding: '6px 14px', minHeight: 36 }}
+            >
+              ✏️ {t('setup.customName')}
+            </button>
+          </div>
+
+          {/* Custom name input — only shown when "custom" is selected */}
+          {isCustom && (
+            <input
+              type="text"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              className="input"
+              placeholder={t('setup.namePlaceholder')}
+              autoFocus
+            />
+          )}
         </section>
 
         {/* Player Count */}
@@ -193,7 +255,17 @@ export default function GameSetup() {
 
       {/* Sticky Start Button */}
       <div className="sticky-footer" style={{ padding: 16 }}>
-        {!canStart && (
+        {user && gamesRemaining !== null && !noGames && (
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 6 }}>
+            {t('setup.gamesRemaining', { count: gamesRemaining })}
+          </p>
+        )}
+        {noGames && (
+          <p style={{ fontSize: 12, color: 'var(--accent-red)', textAlign: 'center', marginBottom: 8 }}>
+            {t('setup.noGamesRemaining')}
+          </p>
+        )}
+        {!canStart && !noGames && (
           <p style={{ fontSize: 12, color: 'var(--accent-orange)', textAlign: 'center', marginBottom: 8 }}>
             {!playerName.trim()
               ? t('setup.nameRequired')
@@ -204,7 +276,7 @@ export default function GameSetup() {
         )}
         <button
           onClick={handleStart}
-          disabled={!canStart}
+          disabled={!canStart || noGames}
           className="btn btn-success"
           style={{ width: '100%', fontSize: 15, minHeight: 48 }}
         >

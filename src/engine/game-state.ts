@@ -17,11 +17,17 @@ export interface Player {
   votedFor: number | null; // player id they voted for
 }
 
+export interface RevealedInfo {
+  targetIndex: number;
+  role: RoleId;
+  isCenterCard?: boolean; // true when targetIndex refers to a center card slot
+}
+
 export interface NightActionLog {
   role: RoleId;
   actorIndex: number; // player index or -1 for center-only
   description: string; // human-readable log
-  revealed?: { targetIndex: number; role: RoleId }[];
+  revealed?: RevealedInfo[];
   swapped?: { a: number; b: number }; // indices that were swapped
 }
 

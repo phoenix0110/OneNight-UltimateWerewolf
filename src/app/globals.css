@@ -293,3 +293,124 @@ body {
 .anim-fade-in-up { animation: fade-in-up 0.4s ease-out forwards; }
 .anim-slide-in { animation: slide-in 0.3s ease-out forwards; }
 .anim-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+
+/* ===========================
+   Tavern Scene (Role Reveal)
+   =========================== */
+
+.scene-tavern-room {
+  background:
+    /* Candle glow from center */
+    radial-gradient(ellipse 50% 40% at 50% 45%, rgba(246, 211, 101, 0.10) 0%, transparent 60%),
+    /* Wall sconce glows */
+    radial-gradient(ellipse 20% 30% at 12% 15%, rgba(255, 180, 84, 0.07) 0%, transparent 50%),
+    radial-gradient(ellipse 20% 30% at 88% 15%, rgba(255, 180, 84, 0.07) 0%, transparent 50%),
+    /* Warm wood floor gradient */
+    radial-gradient(ellipse 100% 50% at 50% 100%, rgba(60, 40, 20, 0.15) 0%, transparent 60%),
+    /* Base tavern dark atmosphere */
+    linear-gradient(180deg, #0D1321 0%, #131A2E 30%, #1A2238 70%, #0F1628 100%);
+}
+
+/* Tavern candle flicker overlay */
+@keyframes candle-flicker {
+  0%, 100% { opacity: 0.08; }
+  25% { opacity: 0.11; }
+  50% { opacity: 0.06; }
+  75% { opacity: 0.12; }
+}
+
+.anim-candle-flicker {
+  animation: candle-flicker 2.5s ease-in-out infinite;
+}
+
+/* Role reveal entrance */
+@keyframes role-reveal {
+  0% {
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+    filter: brightness(0.5);
+  }
+  50% {
+    transform: scale(1.02) translateY(-5px);
+    filter: brightness(1.2);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+.anim-role-reveal {
+  animation: role-reveal 0.6s ease-out forwards;
+}
+
+/* Table appear */
+@keyframes table-appear {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.anim-table-appear {
+  animation: table-appear 0.5s ease-out forwards;
+}
+
+/* Card micro-float */
+@keyframes micro-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.anim-micro-float {
+  animation: micro-float 4s ease-in-out infinite;
+}
+
+/* Slow glow pulse for role card */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: var(--glow-shadow-dim); }
+  50% { box-shadow: var(--glow-shadow-bright); }
+}
+
+.anim-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* Sconce flame flicker */
+@keyframes sconce-flame {
+  0%, 100% { opacity: 0.7; transform: scaleY(1) scaleX(1); }
+  20% { opacity: 0.9; transform: scaleY(1.1) scaleX(0.95); }
+  40% { opacity: 0.6; transform: scaleY(0.9) scaleX(1.05); }
+  60% { opacity: 1; transform: scaleY(1.05) scaleX(0.98); }
+  80% { opacity: 0.75; transform: scaleY(0.95) scaleX(1.02); }
+}
+
+.anim-sconce-flame {
+  animation: sconce-flame 1.8s ease-in-out infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .anim-candle-flicker,
+  .anim-role-reveal,
+  .anim-table-appear,
+  .anim-micro-float,
+  .anim-glow-pulse,
+  .anim-sconce-flame {
+    animation: none !important;
+  }
+  .anim-role-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .anim-table-appear {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

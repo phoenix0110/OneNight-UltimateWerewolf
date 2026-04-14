@@ -1,19 +1,20 @@
 import {
-  collection,
   addDoc,
+  collection,
   doc,
   getDoc,
   getDocs,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  serverTimestamp,
   increment,
+  limit,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { RoleId } from '@/engine/roles';
+import { addStar, getRankId, removeStar } from './rank';
 
 export interface UserStats {
   gamesPlayed: number;
@@ -22,14 +23,20 @@ export interface UserStats {
   winRate: number;
 }
 
+export type SubscriptionPlan = 'free' | 'starter' | 'monthly';
+
 export interface UserProfile {
   displayName: string;
   email: string;
   photoURL: string;
   stats: UserStats;
-  rankPoints: number;
+  stars: number;
   rank: string;
-  subscription: { plan: 'free' | 'premium'; expiresAt: Date | null };
+  subscription: {
+    plan: SubscriptionPlan;
+    gamesRemaining: number;
+    expiresAt: Date | null;
+  };
   createdAt: Date;
 }
 
@@ -57,21 +64,18 @@ export async function saveGameResult(
   });
 
   const userRef = doc(db, 'users', userId);
-  const pointChange = record.didWin ? 20 : -10;
-
   const userSnap = await getDoc(userRef);
-  const currentPoints = userSnap.data()?.rankPoints || 0;
-  const newPoints = Math.max(0, currentPoints + pointChange);
+  const currentStars = userSnap.data()?.stars || 0;
+  const newStars = record.didWin ? addStar(currentStars) : removeStar(currentStars);
 
   await updateDoc(userRef, {
     'stats.gamesPlayed': increment(1),
     'stats.wins': increment(record.didWin ? 1 : 0),
     'stats.losses': increment(record.didWin ? 0 : 1),
-    rankPoints: newPoints,
-    rank: calculateRank(newPoints),
+    stars: newStars,
+    rank: getRankId(newStars),
   });
 
-  // Update win rate
   const updatedSnap = await getDoc(userRef);
   const stats = updatedSnap.data()?.stats;
   if (stats && stats.gamesPlayed > 0) {
@@ -79,6 +83,60 @@ export async function saveGameResult(
       'stats.winRate': Math.round((stats.wins / stats.gamesPlayed) * 100),
     });
   }
+}
+
+export async function consumeGame(userId: string): Promise<boolean> {
+  if (!db) return false;
+
+  const userRef = doc(db, 'users', userId);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return false;
+
+  const data = snap.data();
+  const sub = data.subscription;
+  if (!sub) return false;
+
+  if (sub.plan === 'monthly' && sub.expiresAt) {
+    const expiry = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
+    if (expiry < new Date()) {
+      await updateDoc(userRef, {
+        'subscription.plan': 'free',
+        'subscription.gamesRemaining': 0,
+        'subscription.expiresAt': null,
+      });
+      return false;
+    }
+  }
+
+  const remaining = sub.gamesRemaining ?? 0;
+  if (remaining <= 0) return false;
+
+  await updateDoc(userRef, {
+    'subscription.gamesRemaining': increment(-1),
+  });
+  return true;
+}
+
+export async function canStartGame(userId: string): Promise<{ allowed: boolean; gamesRemaining: number }> {
+  if (!db) return { allowed: true, gamesRemaining: Infinity };
+
+  const userRef = doc(db, 'users', userId);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return { allowed: true, gamesRemaining: 1 };
+
+  const data = snap.data();
+  const sub = data.subscription;
+  if (!sub) return { allowed: true, gamesRemaining: 1 };
+
+  if (sub.plan === 'monthly' && sub.expiresAt) {
+    const expiry = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
+    if (expiry < new Date()) {
+      return { allowed: false, gamesRemaining: 0 };
+    }
+  }
+
+  const remaining = sub.gamesRemaining ?? 0;
+  return { allowed: remaining > 0, gamesRemaining: remaining };
 }
 
 export async function getUserProfile(
@@ -109,39 +167,18 @@ export async function getGameHistory(
 
 export async function getLeaderboard(
   maxResults: number = 50
-): Promise<{ displayName: string; rankPoints: number; rank: string }[]> {
+): Promise<{ displayName: string; stars: number; rank: string }[]> {
   if (!db) return [];
 
   const q = query(
     collection(db, 'users'),
-    orderBy('rankPoints', 'desc'),
+    orderBy('stars', 'desc'),
     limit(maxResults)
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({
     displayName: d.data().displayName,
-    rankPoints: d.data().rankPoints,
+    stars: d.data().stars ?? d.data().rankPoints ?? 0,
     rank: d.data().rank,
   }));
 }
-
-function calculateRank(points: number): string {
-  if (points >= 1500) return 'king';
-  if (points >= 1001) return 'grandmaster';
-  if (points >= 751) return 'master';
-  if (points >= 501) return 'diamond_3';
-  if (points >= 401) return 'diamond_2';
-  if (points >= 301) return 'diamond_1';
-  if (points >= 251) return 'platinum_3';
-  if (points >= 201) return 'platinum_2';
-  if (points >= 151) return 'platinum_1';
-  if (points >= 121) return 'gold_3';
-  if (points >= 91) return 'gold_2';
-  if (points >= 61) return 'gold_1';
-  if (points >= 41) return 'silver_3';
-  if (points >= 26) return 'silver_2';
-  if (points >= 11) return 'silver_1';
-  return 'bronze_1';
-}
-
-export { calculateRank };
