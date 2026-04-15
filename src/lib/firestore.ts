@@ -88,55 +88,66 @@ export async function saveGameResult(
 export async function consumeGame(userId: string): Promise<boolean> {
   if (!db) return false;
 
-  const userRef = doc(db, 'users', userId);
-  const snap = await getDoc(userRef);
-  if (!snap.exists()) return false;
+  try {
+    const userRef = doc(db, 'users', userId);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return false;
 
-  const data = snap.data();
-  const sub = data.subscription;
-  if (!sub) return false;
+    const data = snap.data();
+    const sub = data.subscription;
+    if (!sub) return false;
 
-  if (sub.plan === 'monthly' && sub.expiresAt) {
-    const expiry = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
-    if (expiry < new Date()) {
-      await updateDoc(userRef, {
-        'subscription.plan': 'free',
-        'subscription.gamesRemaining': 0,
-        'subscription.expiresAt': null,
-      });
-      return false;
+    if (sub.plan === 'monthly' && sub.expiresAt) {
+      const expiry = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
+      if (expiry < new Date()) {
+        await updateDoc(userRef, {
+          'subscription.plan': 'free',
+          'subscription.gamesRemaining': 0,
+          'subscription.expiresAt': null,
+        });
+        return false;
+      }
     }
+
+    const remaining = sub.gamesRemaining ?? 0;
+    if (remaining <= 0) return false;
+
+    await updateDoc(userRef, {
+      'subscription.gamesRemaining': increment(-1),
+    });
+    return true;
+  } catch (error) {
+    console.warn('[Firestore] consumeGame failed (possibly offline):', error);
+    // Fail open for gameplay: don't block local match start when quota check cannot reach Firestore.
+    return true;
   }
-
-  const remaining = sub.gamesRemaining ?? 0;
-  if (remaining <= 0) return false;
-
-  await updateDoc(userRef, {
-    'subscription.gamesRemaining': increment(-1),
-  });
-  return true;
 }
 
 export async function canStartGame(userId: string): Promise<{ allowed: boolean; gamesRemaining: number }> {
   if (!db) return { allowed: true, gamesRemaining: Infinity };
 
-  const userRef = doc(db, 'users', userId);
-  const snap = await getDoc(userRef);
-  if (!snap.exists()) return { allowed: true, gamesRemaining: 1 };
+  try {
+    const userRef = doc(db, 'users', userId);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return { allowed: true, gamesRemaining: 1 };
 
-  const data = snap.data();
-  const sub = data.subscription;
-  if (!sub) return { allowed: true, gamesRemaining: 1 };
+    const data = snap.data();
+    const sub = data.subscription;
+    if (!sub) return { allowed: true, gamesRemaining: 1 };
 
-  if (sub.plan === 'monthly' && sub.expiresAt) {
-    const expiry = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
-    if (expiry < new Date()) {
-      return { allowed: false, gamesRemaining: 0 };
+    if (sub.plan === 'monthly' && sub.expiresAt) {
+      const expiry = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
+      if (expiry < new Date()) {
+        return { allowed: false, gamesRemaining: 0 };
+      }
     }
-  }
 
-  const remaining = sub.gamesRemaining ?? 0;
-  return { allowed: remaining > 0, gamesRemaining: remaining };
+    const remaining = sub.gamesRemaining ?? 0;
+    return { allowed: remaining > 0, gamesRemaining: remaining };
+  } catch (error) {
+    console.warn('[Firestore] canStartGame failed (possibly offline):', error);
+    return { allowed: true, gamesRemaining: Infinity };
+  }
 }
 
 export async function getUserProfile(
