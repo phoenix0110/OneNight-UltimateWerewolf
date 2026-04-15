@@ -40,10 +40,16 @@ export default function GameSetup() {
 
   useEffect(() => {
     if (!user) return;
-    canStartGame(user.uid).then(({ allowed, gamesRemaining: remaining }) => {
-      setGamesRemaining(remaining);
-      setNoGames(!allowed);
-    });
+    canStartGame(user.uid)
+      .then(({ allowed, gamesRemaining: remaining }) => {
+        setGamesRemaining(remaining);
+        setNoGames(!allowed);
+      })
+      .catch((error) => {
+        console.warn('[GameSetup] Failed to load game quota, allowing local start:', error);
+        setGamesRemaining(null);
+        setNoGames(false);
+      });
   }, [user]);
 
   const nameList = PRESET_NAMES[locale] ?? PRESET_NAMES.en;
@@ -81,12 +87,16 @@ export default function GameSetup() {
 
   const handleStart = async () => {
     if (user) {
-      const consumed = await consumeGame(user.uid);
-      if (!consumed) {
-        setNoGames(true);
-        return;
+      try {
+        const consumed = await consumeGame(user.uid);
+        if (!consumed) {
+          setNoGames(true);
+          return;
+        }
+        setGamesRemaining((prev) => (prev !== null ? Math.max(0, prev - 1) : prev));
+      } catch (error) {
+        console.warn('[GameSetup] Failed to consume game quota, continuing in offline mode:', error);
       }
-      setGamesRemaining((prev) => (prev !== null ? Math.max(0, prev - 1) : prev));
     }
     setLocale(locale);
     startGame({ playerCount, playerName: playerName.trim() || t('setup.defaultPlayerName'), roles: selectedRoles });

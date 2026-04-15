@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { MAX_DISCUSSION_ROUNDS } from '@/engine/game-rules';
 import { useGameStore } from '@/store/game-store';
@@ -23,12 +23,19 @@ export default function DayPhaseUI() {
   const discussionRound = useGameStore((s) => s.discussionRound);
   const getBuiltInSpeechesStore = useGameStore((s) => s.getBuiltInSpeeches);
   const getFilledSpeech = useGameStore((s) => s.getFilledSpeech);
+  const nightRevealed = useGameStore((s) => s.nightRevealed);
 
   const [message, setMessage] = useState('');
   const [showQuickSpeech, setShowQuickSpeech] = useState(false);
   const hasStartedRef = useRef(false);
 
   const builtInSpeeches = getBuiltInSpeechesStore();
+
+  const filledSpeeches = useMemo(
+    () => builtInSpeeches.map((speech) => ({ speech, text: getFilledSpeech(speech) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [builtInSpeeches.length, players, nightRevealed],
+  );
 
   const currentSpeakerId = speakingOrder[currentSpeakerIndex] ?? null;
   const currentSpeaker = currentSpeakerId !== null ? players.find((p) => p.id === currentSpeakerId) : null;
@@ -66,14 +73,9 @@ export default function DayPhaseUI() {
     setShowQuickSpeech(false);
   };
 
-  const handleQuickSpeech = (template: string) => {
+  const handleQuickSpeech = (filledText: string) => {
     if (!isHumanTurn) return;
-    const speeches = getBuiltInSpeechesStore();
-    const speech = speeches.find((s) => s.template === template);
-    if (speech) {
-      const filled = getFilledSpeech(speech);
-      submitHumanSpeech(filled, true);
-    }
+    setMessage(filledText);
     setShowQuickSpeech(false);
   };
 
@@ -179,14 +181,14 @@ export default function DayPhaseUI() {
                 {t('game.quickSpeech')}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {builtInSpeeches.map((speech) => (
+                {filledSpeeches.map(({ speech, text }) => (
                   <button
                     key={speech.id}
-                    onClick={() => handleQuickSpeech(speech.template)}
+                    onClick={() => handleQuickSpeech(text)}
                     className="btn btn-secondary"
                     style={{ textAlign: 'left', fontSize: 13, padding: '8px 12px', minHeight: 0 }}
                   >
-                    {getFilledSpeech(speech)}
+                    {text}
                   </button>
                 ))}
               </div>
