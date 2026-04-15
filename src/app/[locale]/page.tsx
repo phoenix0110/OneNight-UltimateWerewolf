@@ -175,15 +175,23 @@ export default function LandingPage() {
       </main>
 
       {/* ── Footer ── */}
-      <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-        <button
-          onClick={() => router.push(`/${locale}/achievements`)}
-          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', transition: 'color 0.15s' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-cyan)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-        >
-          {t('common.achievements')}
-        </button>
+      <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 16, flexWrap: 'wrap' }}>
+        {[
+          { label: t('common.achievements'), href: `/${locale}/achievements` },
+          { label: t('legal.about'), href: `/${locale}/about` },
+          { label: t('legal.privacy'), href: `/${locale}/privacy` },
+          { label: t('legal.terms'), href: `/${locale}/terms` },
+        ].map((link) => (
+          <button
+            key={link.href}
+            onClick={() => router.push(link.href)}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', transition: 'color 0.15s' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-cyan)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          >
+            {link.label}
+          </button>
+        ))}
       </footer>
 
       {/* ── Login Modal ── */}
