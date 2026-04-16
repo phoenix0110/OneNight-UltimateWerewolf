@@ -207,12 +207,17 @@
     "termsServiceTitle": "服务使用",
     "termsServiceContent": "一夜狼人杀按原样提供，仅供娱乐目的。您不得滥用服务、试图利用AI系统漏洞，或使用自动化工具与游戏交互。",
     "termsAccountTitle": "账户与付款",
-    "termsAccountContent": "免费账户享有有限的游戏次数。付费方案（入门版、畅玩版）根据定价页面描述提供额外的游戏次数。付款通过 LemonSqueezy 处理。退款政策受 LemonSqueezy 条款约束。",
+    "termsAccountContent": "免费账户享有有限的游戏次数。付费方案（入门版、畅玩版）根据定价页面描述提供额外的游戏次数。付款通过 Creem 处理。退款政策受 Creem 条款约束。",
     "termsContentTitle": "用户行为",
     "termsContentContent": "虽然游戏主要是与AI进行的单人游戏，但您同意不以任何可能损害平台或其他用户的方式滥用服务。",
     "termsChangesTitle": "条款变更",
     "termsChangesContent": "我们可能会不时更新这些条款。继续使用服务即表示接受更新后的条款。",
     "lastUpdated": "最后更新：2026年4月"
+  },
+  "checkout": {
+    "successTitle": "支付成功！",
+    "successDesc": "感谢您的购买！您的高级会员权限已激活。",
+    "redirecting": "{seconds}秒后自动跳转到游戏..."
   },
   "settings": {
     "title": "设置",

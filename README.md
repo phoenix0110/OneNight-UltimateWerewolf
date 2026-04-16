@@ -9,7 +9,7 @@ A web-based implementation of the classic social deduction game **One Night Ulti
 - **Styling**: Tailwind CSS 4
 - **Internationalization**: next-intl (English / Chinese)
 - **Backend**: Firebase (Authentication, Firestore, Cloud Functions)
-- **Payments**: Lemon Squeezy (Merchant of Record)
+- **Payments**: Creem (Merchant of Record)
 
 ## Prerequisites
 
@@ -33,10 +33,11 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 # Set to 'true' to use Firebase emulators instead of production
 NEXT_PUBLIC_USE_EMULATORS=true
 
-# Lemon Squeezy (payment processing)
-LEMONSQUEEZY_API_KEY=your_ls_api_key
-LEMONSQUEEZY_WEBHOOK_SECRET=your_ls_webhook_secret
-NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID=your_ls_store_id
+# Creem (payment processing) — https://creem.io/dashboard
+CREEM_API_KEY=creem_test_xxx
+CREEM_WEBHOOK_SECRET=your_webhook_secret
+NEXT_PUBLIC_CREEM_STARTER_PRODUCT_ID=prod_xxx
+NEXT_PUBLIC_CREEM_MONTHLY_PRODUCT_ID=prod_xxx
 ```
 
 ## Local Development
