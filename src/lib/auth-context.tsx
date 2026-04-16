@@ -44,20 +44,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
 
       if (firebaseUser && db) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
+        try {
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
 
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            displayName: firebaseUser.displayName,
-            email: firebaseUser.email,
-            photoURL: firebaseUser.photoURL,
-            stats: { gamesPlayed: 0, wins: 0, losses: 0, winRate: 0 },
-            stars: 0,
-            rank: 'bronze_3',
-            subscription: { plan: 'free', gamesRemaining: 1, expiresAt: null },
-            createdAt: serverTimestamp(),
-          });
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              displayName: firebaseUser.displayName,
+              email: firebaseUser.email,
+              photoURL: firebaseUser.photoURL,
+              stats: { gamesPlayed: 0, wins: 0, losses: 0, winRate: 0 },
+              stars: 0,
+              rank: 'bronze_3',
+              subscription: { plan: 'free', gamesRemaining: 1, expiresAt: null },
+              createdAt: serverTimestamp(),
+            });
+          }
+        } catch (error) {
+          console.warn('[Auth] Failed to sync user profile (possibly offline):', error);
         }
       }
     });

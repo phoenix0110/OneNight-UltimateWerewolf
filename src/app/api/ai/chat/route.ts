@@ -3,6 +3,31 @@ import path from 'path';
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import { verifyIdToken } from '@/lib/firebase-admin';
+
+// --- Rate limiting ---
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_AUTHED = 30;
+const RATE_LIMIT_ANON = 10;
+const requestCounts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(key: string, limit: number): boolean {
+  const now = Date.now();
+  const entry = requestCounts.get(key);
+  if (!entry || now > entry.resetAt) {
+    requestCounts.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > limit;
+}
+
+function getClientIp(request: NextRequest): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+}
+
 interface ChatRequest {
   messages: { role: string; content: string }[];
   gameSessionId?: string;
@@ -185,6 +210,17 @@ async function callProvider(
 
 export async function POST(request: NextRequest) {
   try {
+    // --- Auth & rate limiting ---
+    const authHeader = request.headers.get('authorization') || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    const uid = token ? await verifyIdToken(token) : null;
+
+    const rateLimitKey = uid ?? `ip:${getClientIp(request)}`;
+    const rateLimit = uid ? RATE_LIMIT_AUTHED : RATE_LIMIT_ANON;
+    if (isRateLimited(rateLimitKey, rateLimit)) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const body: ChatRequest = await request.json();
     const { messages, gameSessionId, playerName, phase } = body;
     const sessionId = gameSessionId || 'no-session';
@@ -192,8 +228,8 @@ export async function POST(request: NextRequest) {
     const providers = getProviders();
     if (providers.length === 0) {
       return NextResponse.json(
-        { error: 'No AI providers configured. Set OPENROUTER_API_KEY or AI_API_KEY in .env' },
-        { status: 500 }
+        { error: 'AI service is not available' },
+        { status: 503 }
       );
     }
 
@@ -246,8 +282,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.error('[AI] All providers failed. Last error:', lastError);
     return NextResponse.json(
-      { error: `All providers failed. Last error: ${lastError}` },
+      { error: 'AI service temporarily unavailable' },
       { status: 502 }
     );
   } catch (error) {

@@ -121,7 +121,12 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text();
     const signature = request.headers.get('x-signature') || '';
 
-    if (WEBHOOK_SECRET && !verifySignature(rawBody, signature)) {
+    if (!WEBHOOK_SECRET) {
+      console.error('[Webhook] LEMONSQUEEZY_WEBHOOK_SECRET is not configured');
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+    }
+
+    if (!verifySignature(rawBody, signature)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
