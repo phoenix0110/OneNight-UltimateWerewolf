@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { CreemCheckout } from '@creem_io/nextjs';
 import { useTranslations } from 'next-intl';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
@@ -130,20 +131,26 @@ export default function LandingPage() {
               <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
                 {t('landing.starterFeatures')}
               </div>
-              <button
-                onClick={() => {
-                  const storeId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID;
-                  if (storeId) {
-                    window.open(`https://${storeId}.lemonsqueezy.com`, '_blank');
-                  } else {
-                    alert('Payment is not configured yet. Please set NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID.');
-                  }
-                }}
-                className="btn btn-success"
-                style={{ width: '100%', fontSize: 12 }}
-              >
-                {t('landing.buyStarter')}
-              </button>
+              {user && process.env.NEXT_PUBLIC_CREEM_STARTER_PRODUCT_ID ? (
+                <CreemCheckout
+                  productId={process.env.NEXT_PUBLIC_CREEM_STARTER_PRODUCT_ID}
+                  customer={{ email: user.email || undefined, name: user.displayName || undefined }}
+                  referenceId={user.uid}
+                  successUrl={`/${locale}/checkout/success`}
+                >
+                  <button className="btn btn-success" style={{ width: '100%', fontSize: 12 }}>
+                    {t('landing.buyStarter')}
+                  </button>
+                </CreemCheckout>
+              ) : (
+                <button
+                  onClick={() => !user ? setShowLoginModal(true) : alert('Payment product not configured')}
+                  className="btn btn-success"
+                  style={{ width: '100%', fontSize: 12 }}
+                >
+                  {t('landing.buyStarter')}
+                </button>
+              )}
             </div>
 
             {/* Monthly Pass */}
@@ -155,20 +162,26 @@ export default function LandingPage() {
               <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
                 {t('landing.monthlyFeatures')}
               </div>
-              <button
-                onClick={() => {
-                  const storeId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID;
-                  if (storeId) {
-                    window.open(`https://${storeId}.lemonsqueezy.com`, '_blank');
-                  } else {
-                    alert('Payment is not configured yet. Please set NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID.');
-                  }
-                }}
-                className="btn btn-success"
-                style={{ width: '100%', fontSize: 12 }}
-              >
-                {t('landing.subscribeMonthly')}
-              </button>
+              {user && process.env.NEXT_PUBLIC_CREEM_MONTHLY_PRODUCT_ID ? (
+                <CreemCheckout
+                  productId={process.env.NEXT_PUBLIC_CREEM_MONTHLY_PRODUCT_ID}
+                  customer={{ email: user.email || undefined, name: user.displayName || undefined }}
+                  referenceId={user.uid}
+                  successUrl={`/${locale}/checkout/success`}
+                >
+                  <button className="btn btn-success" style={{ width: '100%', fontSize: 12 }}>
+                    {t('landing.subscribeMonthly')}
+                  </button>
+                </CreemCheckout>
+              ) : (
+                <button
+                  onClick={() => !user ? setShowLoginModal(true) : alert('Payment product not configured')}
+                  className="btn btn-success"
+                  style={{ width: '100%', fontSize: 12 }}
+                >
+                  {t('landing.subscribeMonthly')}
+                </button>
+              )}
             </div>
           </div>
         </section>

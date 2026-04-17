@@ -207,12 +207,17 @@
     "termsServiceTitle": "Use of Service",
     "termsServiceContent": "One Night Werewolf is provided as-is for entertainment purposes. You must not abuse the service, attempt to exploit the AI system, or use automated tools to interact with the game.",
     "termsAccountTitle": "Accounts & Payments",
-    "termsAccountContent": "Free accounts receive a limited number of games. Paid plans (Starter, Monthly) grant additional games as described on the pricing page. Payments are processed through LemonSqueezy. Refund policies are governed by LemonSqueezy's terms.",
+    "termsAccountContent": "Free accounts receive a limited number of games. Paid plans (Starter, Monthly) grant additional games as described on the pricing page. Payments are processed through Creem. Refund policies are governed by Creem's terms.",
     "termsContentTitle": "User Conduct",
     "termsContentContent": "While the game is primarily single-player against AI, you agree not to misuse the service in any way that could harm the platform or other users.",
     "termsChangesTitle": "Changes to Terms",
     "termsChangesContent": "We may update these terms from time to time. Continued use of the service constitutes acceptance of the updated terms.",
     "lastUpdated": "Last updated: April 2026"
+  },
+  "checkout": {
+    "successTitle": "Payment Successful!",
+    "successDesc": "Thank you for your purchase! Your premium access is now active.",
+    "redirecting": "Redirecting to game in {seconds}s..."
   },
   "settings": {
     "title": "Settings",

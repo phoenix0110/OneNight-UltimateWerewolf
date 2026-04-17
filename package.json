@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@creem_io/nextjs": "^0.6.0",
     "@dataconnect/generated": "file:src/dataconnect-generated",
     "firebase": "^12.11.0",
     "firebase-admin": "^13.8.0",
