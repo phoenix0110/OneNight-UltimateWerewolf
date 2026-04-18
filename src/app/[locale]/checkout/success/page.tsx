@@ -15,17 +15,16 @@ export default function CheckoutSuccessPage() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          router.push(`/${locale}/game`);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setCountdown((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [locale, router]);
+  }, []);
+
+  useEffect(() => {
+    if (countdown === 0) {
+      router.push(`/${locale}/game`);
+    }
+  }, [countdown, locale, router]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', padding: 16, textAlign: 'center' }}>
