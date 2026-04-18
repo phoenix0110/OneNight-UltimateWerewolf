@@ -24,7 +24,7 @@ export const db: Firestore | null = app ? getFirestore(app) : null;
 export const googleProvider = isFirebaseConfigured ? new GoogleAuthProvider() : null;
 
 // Guard against duplicate connections during HMR
-const globalAny = globalThis as Record<string, boolean>;
+const globalAny = globalThis as unknown as Record<string, boolean>;
 if (useEmulators && !globalAny.__FIREBASE_EMULATORS_CONNECTED__) {
   globalAny.__FIREBASE_EMULATORS_CONNECTED__ = true;
   if (auth) connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
