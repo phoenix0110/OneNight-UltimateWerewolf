@@ -29,6 +29,7 @@ export interface UserProfile {
   displayName: string;
   email: string;
   photoURL: string;
+  nickname?: string;
   stats: UserStats;
   stars: number;
   rank: string;
@@ -148,6 +149,12 @@ export async function canStartGame(userId: string): Promise<{ allowed: boolean; 
     console.warn('[Firestore] canStartGame failed (possibly offline):', error);
     return { allowed: true, gamesRemaining: Infinity };
   }
+}
+
+export async function updateNickname(userId: string, nickname: string): Promise<void> {
+  if (!db) return;
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, { nickname: nickname.trim() });
 }
 
 export async function getUserProfile(

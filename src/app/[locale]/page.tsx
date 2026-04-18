@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import LanguageToggle from '@/components/ui/LanguageToggle';
+import UserDropdown from '@/components/ui/UserDropdown';
 
 const PHASES = [
   { icon: '⚙️', labelKey: 'landing.phaseSetup' },
@@ -20,7 +21,7 @@ export default function LandingPage() {
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   return (
@@ -33,9 +34,7 @@ export default function LandingPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <LanguageToggle />
           {user ? (
-            <button onClick={signOut} className="btn btn-ghost" style={{ fontSize: 12, minHeight: 36, padding: '6px 12px' }} title={user.displayName || ''}>
-              {user.displayName?.split(' ')[0] || t('common.logout')}
-            </button>
+            <UserDropdown />
           ) : (
             <button
               onClick={() => setShowLoginModal(true)}
@@ -184,13 +183,16 @@ export default function LandingPage() {
               )}
             </div>
           </div>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 16, textAlign: 'center', lineHeight: 1.6, fontStyle: 'italic', opacity: 0.8 }}>
+            {t('landing.pricingNote')}
+          </p>
         </section>
       </main>
 
       {/* ── Footer ── */}
       <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 16, flexWrap: 'wrap' }}>
         {[
-          { label: t('common.achievements'), href: `/${locale}/achievements` },
           { label: t('legal.about'), href: `/${locale}/about` },
           { label: t('legal.privacy'), href: `/${locale}/privacy` },
           { label: t('legal.terms'), href: `/${locale}/terms` },

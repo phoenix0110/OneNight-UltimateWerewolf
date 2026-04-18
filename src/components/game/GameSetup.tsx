@@ -12,7 +12,7 @@ import {
   PLAYER_COUNT_OPTIONS,
 } from '@/engine/game-rules';
 import { useAuth } from '@/lib/auth-context';
-import { canStartGame, consumeGame } from '@/lib/firestore';
+import { canStartGame, consumeGame, getUserProfile } from '@/lib/firestore';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import MatchSummaryCard from './MatchSummaryCard';
 
@@ -38,6 +38,10 @@ export default function GameSetup() {
   const [gamesRemaining, setGamesRemaining] = useState<number | null>(null);
   const [noGames, setNoGames] = useState(false);
 
+  const nameList = PRESET_NAMES[locale] ?? PRESET_NAMES.en;
+  const [selectedNameKey, setSelectedNameKey] = useState(nameList[0]);
+  const [customName, setCustomName] = useState('');
+
   useEffect(() => {
     if (!user) return;
     canStartGame(user.uid)
@@ -50,11 +54,14 @@ export default function GameSetup() {
         setGamesRemaining(null);
         setNoGames(false);
       });
-  }, [user]);
 
-  const nameList = PRESET_NAMES[locale] ?? PRESET_NAMES.en;
-  const [selectedNameKey, setSelectedNameKey] = useState(nameList[0]); // default = first preset name
-  const [customName, setCustomName] = useState('');
+    getUserProfile(user.uid).then((profile) => {
+      if (profile?.nickname) {
+        setSelectedNameKey(CUSTOM_KEY);
+        setCustomName(profile.nickname);
+      }
+    });
+  }, [user]);
   const isCustom = selectedNameKey === CUSTOM_KEY;
   const playerName = isCustom ? customName : selectedNameKey;
 

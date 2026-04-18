@@ -5,6 +5,7 @@ import { Press_Start_2P } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { AuthProvider } from '@/lib/auth-context';
+import DiscordButton from '@/components/ui/DiscordButton';
 import '../globals.css';
 
 const pixelFont = Press_Start_2P({
@@ -42,6 +43,7 @@ export default async function LocaleLayout({
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             {children}
+            <DiscordButton />
           </AuthProvider>
         </NextIntlClientProvider>
       </body>
