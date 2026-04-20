@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
@@ -15,14 +15,21 @@ export default function UserDropdown() {
 
   const [open, setOpen] = useState(false);
   const [gamesRemaining, setGamesRemaining] = useState<number | null>(null);
-  const [displayLabel, setDisplayLabel] = useState<string>('');
+  const [nicknameOverride, setNicknameOverride] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const displayLabel = useMemo(() => {
+    if (nicknameOverride) return nicknameOverride;
+    return user?.displayName?.split(' ')[0] || '';
+  }, [nicknameOverride, user?.displayName]);
 
   useEffect(() => {
     if (!user) return;
 
     getUserProfile(user.uid).then((profile) => {
-      setDisplayLabel(profile?.nickname || user.displayName?.split(' ')[0] || '');
+      if (profile?.nickname) {
+        setNicknameOverride(profile.nickname);
+      }
     });
 
     canStartGame(user.uid)

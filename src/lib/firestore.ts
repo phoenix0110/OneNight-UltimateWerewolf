@@ -23,7 +23,7 @@ export interface UserStats {
   winRate: number;
 }
 
-export type SubscriptionPlan = 'free' | 'starter' | 'monthly';
+export type SubscriptionPlan = 'free' | 'paid';
 
 export interface UserProfile {
   displayName: string;
@@ -98,18 +98,6 @@ export async function consumeGame(userId: string): Promise<boolean> {
     const sub = data.subscription;
     if (!sub) return false;
 
-    if (sub.plan === 'monthly' && sub.expiresAt) {
-      const expiry = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
-      if (expiry < new Date()) {
-        await updateDoc(userRef, {
-          'subscription.plan': 'free',
-          'subscription.gamesRemaining': 0,
-          'subscription.expiresAt': null,
-        });
-        return false;
-      }
-    }
-
     const remaining = sub.gamesRemaining ?? 0;
     if (remaining <= 0) return false;
 
@@ -135,13 +123,6 @@ export async function canStartGame(userId: string): Promise<{ allowed: boolean; 
     const data = snap.data();
     const sub = data.subscription;
     if (!sub) return { allowed: true, gamesRemaining: 1 };
-
-    if (sub.plan === 'monthly' && sub.expiresAt) {
-      const expiry = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
-      if (expiry < new Date()) {
-        return { allowed: false, gamesRemaining: 0 };
-      }
-    }
 
     const remaining = sub.gamesRemaining ?? 0;
     return { allowed: remaining > 0, gamesRemaining: remaining };

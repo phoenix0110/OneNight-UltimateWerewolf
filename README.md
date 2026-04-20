@@ -1,6 +1,6 @@
-# One Night Ultimate Werewolf
+# AI Werewolf: Midnight Hunt
 
-A web-based implementation of the classic social deduction game **One Night Ultimate Werewolf**, featuring AI opponents with distinct personalities. Built with Next.js and Firebase.
+A web-based social deduction game inspired by classic one-night werewolf tabletop games, featuring AI opponents with distinct personalities. Built with Next.js and Firebase.
 
 ## Tech Stack
 

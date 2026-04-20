@@ -1,9 +1,21 @@
 import { Webhook } from '@creem_io/nextjs';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 
-const STARTER_GAMES = 5;
-const MONTHLY_GAMES = 50;
+const TIER_CONFIG: Record<string, number> = {};
+
+function loadTierConfig() {
+  const tiers = [
+    { envKey: 'NEXT_PUBLIC_CREEM_TIER1_PRODUCT_ID', games: 2 },
+    { envKey: 'NEXT_PUBLIC_CREEM_TIER2_PRODUCT_ID', games: 5 },
+    { envKey: 'NEXT_PUBLIC_CREEM_TIER3_PRODUCT_ID', games: 50 },
+  ];
+  for (const { envKey, games } of tiers) {
+    const id = process.env[envKey];
+    if (id) TIER_CONFIG[id] = games;
+  }
+}
+loadTierConfig();
 
 function getProductId(product: unknown): string | null {
   if (!product) return null;
@@ -15,77 +27,47 @@ function getProductId(product: unknown): string | null {
   return null;
 }
 
-async function grantAccessByProduct(userId: string, productId: string | null, periodEnd?: Date) {
-  const userRef = adminDb.collection('users').doc(userId);
-  const starterProductId = process.env.NEXT_PUBLIC_CREEM_STARTER_PRODUCT_ID;
-  const monthlyProductId = process.env.NEXT_PUBLIC_CREEM_MONTHLY_PRODUCT_ID;
+async function grantGamesByProduct(userId: string, productId: string | null) {
+  const db = getAdminDb();
+  const userRef = db.collection('users').doc(userId);
 
   if (!productId) {
     console.error(`[Creem Webhook] Missing productId for user ${userId}`);
     return;
   }
 
-  if (monthlyProductId && productId === monthlyProductId) {
-    await userRef.set(
-      {
-        subscription: {
-          plan: 'monthly',
-          gamesRemaining: MONTHLY_GAMES,
-          expiresAt: periodEnd ?? null,
-        },
-      },
-      { merge: true }
-    );
+  const gamesToAdd = TIER_CONFIG[productId];
+  if (!gamesToAdd) {
+    console.warn(`[Creem Webhook] Unknown product ${productId} for user ${userId}, skipping`);
     return;
   }
 
-  if (starterProductId && productId === starterProductId) {
-    const snap = await userRef.get();
-    const current = snap.exists ? (snap.data()?.subscription?.gamesRemaining ?? 0) : 0;
-    await userRef.set(
-      {
-        subscription: {
-          plan: 'starter',
-          gamesRemaining: current + STARTER_GAMES,
-          expiresAt: null,
-        },
-      },
-      { merge: true }
-    );
-    return;
-  }
-
-  console.warn(`[Creem Webhook] Unknown product ${productId} for user ${userId}, skipping entitlement update`);
-}
-
-async function revokePremiumAccess(userId: string) {
-  const userRef = adminDb.collection('users').doc(userId);
+  const snap = await userRef.get();
+  const current = snap.exists ? (snap.data()?.subscription?.gamesRemaining ?? 0) : 0;
   await userRef.set(
     {
       subscription: {
-        plan: 'free',
+        plan: 'paid',
+        gamesRemaining: current + gamesToAdd,
         expiresAt: null,
       },
     },
     { merge: true }
   );
+  console.log(`[Creem Webhook] Added ${gamesToAdd} games for user ${userId} (was ${current}, now ${current + gamesToAdd})`);
 }
 
 export const POST = Webhook({
   webhookSecret: process.env.CREEM_WEBHOOK_SECRET!,
 
-  onGrantAccess: async ({ reason, customer, metadata, current_period_end_date, product }) => {
+  onGrantAccess: async ({ reason, customer, metadata, product }) => {
     const userId = metadata?.referenceId as string;
     if (!userId) {
       console.error(`[Creem Webhook] onGrantAccess(${reason}): missing referenceId for ${customer.email}`);
       return;
     }
     console.log(`[Creem Webhook] Granting access (${reason}) to ${customer.email} [${userId}]`);
-    await grantAccessByProduct(
-      userId,
-      getProductId(product),
-      current_period_end_date ? new Date(current_period_end_date) : undefined
-    );
+    await grantGamesByProduct(userId, getProductId(product));
   },
 
   onRevokeAccess: async ({ reason, customer, metadata }) => {
@@ -95,7 +77,6 @@ export const POST = Webhook({
       return;
     }
     console.log(`[Creem Webhook] Revoking access (${reason}) from ${customer.email} [${userId}]`);
-    await revokePremiumAccess(userId);
   },
 
   onCheckoutCompleted: async ({ customer, product, metadata, subscription }) => {
@@ -105,9 +86,8 @@ export const POST = Webhook({
       return;
     }
 
-    // One-time purchase products may not trigger grant callbacks.
     if (!subscription) {
-      await grantAccessByProduct(userId, getProductId(product));
+      await grantGamesByProduct(userId, getProductId(product));
     }
 
     console.log(`[Creem Webhook] Checkout completed: ${customer?.email} purchased ${product.name}`, metadata);

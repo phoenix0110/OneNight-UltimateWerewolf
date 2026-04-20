@@ -16,7 +16,7 @@ const pixelFont = Press_Start_2P({
 });
 
 export const metadata: Metadata = {
-  title: 'One Night Werewolf',
+  title: 'AI Werewolf: Midnight Hunt',
   description: 'The classic social deduction game with AI opponents',
 };
 

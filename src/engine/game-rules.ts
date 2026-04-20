@@ -1,5 +1,5 @@
 /**
- * Game Rules & Constants for One Night Ultimate Werewolf
+ * Game Rules & Constants for AI Werewolf: Midnight Hunt
  *
  * All core game configuration lives here.
  * Change this file to adjust player counts, role presets, center card count, etc.
@@ -17,7 +17,7 @@ export const PLAYER_COUNT_OPTIONS = [5, 6, 7, 8] as const;
 
 // ─── Center Cards ────────────────────────────────────────────────────
 /**
- * In One Night Ultimate Werewolf, there are always 3 cards placed
+ * In this game, there are always 3 cards placed
  * face-down in the center of the table. These are not dealt to players.
  * Total roles needed = playerCount + CENTER_CARD_COUNT
  */

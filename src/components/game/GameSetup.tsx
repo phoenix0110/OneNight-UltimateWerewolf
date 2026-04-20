@@ -39,8 +39,11 @@ export default function GameSetup() {
   const [noGames, setNoGames] = useState(false);
 
   const nameList = PRESET_NAMES[locale] ?? PRESET_NAMES.en;
-  const [selectedNameKey, setSelectedNameKey] = useState(nameList[0]);
-  const [customName, setCustomName] = useState('');
+
+  const savedNameKey = typeof window !== 'undefined' ? localStorage.getItem('game_name_key') : null;
+  const savedCustomName = typeof window !== 'undefined' ? localStorage.getItem('game_custom_name') : null;
+  const [selectedNameKey, setSelectedNameKey] = useState(savedNameKey || nameList[0]);
+  const [customName, setCustomName] = useState(savedCustomName || '');
 
   useEffect(() => {
     if (!user) return;
@@ -56,12 +59,25 @@ export default function GameSetup() {
       });
 
     getUserProfile(user.uid).then((profile) => {
-      if (profile?.nickname) {
+      if (profile?.nickname && !savedNameKey) {
         setSelectedNameKey(CUSTOM_KEY);
         setCustomName(profile.nickname);
+        localStorage.setItem('game_name_key', CUSTOM_KEY);
+        localStorage.setItem('game_custom_name', profile.nickname);
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const persistNameChoice = (key: string, custom?: string) => {
+    setSelectedNameKey(key);
+    localStorage.setItem('game_name_key', key);
+    if (custom !== undefined) {
+      setCustomName(custom);
+      localStorage.setItem('game_custom_name', custom);
+    }
+  };
+
   const isCustom = selectedNameKey === CUSTOM_KEY;
   const playerName = isCustom ? customName : selectedNameKey;
 
@@ -135,7 +151,7 @@ export default function GameSetup() {
             {nameList.map((name) => (
               <button
                 key={name}
-                onClick={() => setSelectedNameKey(name)}
+                onClick={() => persistNameChoice(name)}
                 className={`btn ${selectedNameKey === name ? 'btn-success' : 'btn-secondary'}`}
                 style={{ fontSize: 13, padding: '6px 14px', minHeight: 36 }}
               >
@@ -143,7 +159,7 @@ export default function GameSetup() {
               </button>
             ))}
             <button
-              onClick={() => setSelectedNameKey(CUSTOM_KEY)}
+              onClick={() => persistNameChoice(CUSTOM_KEY)}
               className={`btn ${isCustom ? 'btn-success' : 'btn-secondary'}`}
               style={{ fontSize: 13, padding: '6px 14px', minHeight: 36 }}
             >
@@ -156,7 +172,10 @@ export default function GameSetup() {
             <input
               type="text"
               value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
+              onChange={(e) => {
+                setCustomName(e.target.value);
+                localStorage.setItem('game_custom_name', e.target.value);
+              }}
               className="input"
               placeholder={t('setup.namePlaceholder')}
               autoFocus
