@@ -1,19 +1,16 @@
 import { create } from 'zustand';
 
-import { buildChatMessages, buildVoteChatMessages, parseVoteResponse } from '@/ai/decision';
-import { BuiltInSpeech, fillTemplate, getBuiltInSpeeches } from '@/ai/built-in-speeches';
-import { AIPersonality, generatePersonalities } from '@/ai/personality';
+import { AIContext, buildChatMessages, buildVoteChatMessages, parseVoteResponse, sanitizeAIResponse } from '@/ai/decision';
+import { BuiltInSpeech, getBuiltInSpeeches } from '@/ai/built-in-speeches';
 import { DiscussionContext } from '@/ai/prompts';
 import { AIRequestContext, sendAIMessage } from '@/ai/providers';
 import { ChatMessage, createInitialState, GameConfig, GameState, RevealedInfo } from '@/engine/game-state';
 import { MAX_DISCUSSION_ROUNDS } from '@/engine/game-rules';
 import { NightActionChoice, processAllNightActions, resolveNightAction } from '@/engine/night-actions';
-import { RoleId } from '@/engine/roles';
 import { generateAIVote, tallyVotes } from '@/engine/voting';
 import { determineWinners, WinResult } from '@/engine/win-conditions';
 
 interface GameStore extends GameState {
-  aiPersonalities: AIPersonality[];
   locale: string;
   gameSessionId: string;
   winResult: WinResult | null;
@@ -33,12 +30,34 @@ interface GameStore extends GameState {
   advanceSpeaker: () => void;
   submitHumanSpeech: (text: string, isBuiltIn: boolean) => void;
   proceedToVote: () => void;
+  redealCards: () => void;
   castVote: (targetId: number) => void;
   runAIVotes: () => Promise<void>;
   resolveGame: () => void;
   resetGame: () => void;
   getBuiltInSpeeches: () => BuiltInSpeech[];
   getFilledSpeech: (speech: BuiltInSpeech) => string;
+}
+
+const AI_NAMES: Record<string, string[]> = {
+  en: [
+    'Alex', 'Blake', 'Casey', 'Drew', 'Ellis',
+    'Finley', 'Gray', 'Harper', 'Indigo', 'Jordan',
+    'Kit', 'Luna', 'Morgan', 'Nova', 'Oakley',
+    'Phoenix', 'Quinn', 'Riley', 'Sage', 'Tatum',
+  ],
+  zh: [
+    '楚天歌', '顾流苏', '沈夜澜', '柳暮烟', '萧寒声',
+    '苏晚棠', '裴惊鸿', '陆九歌', '白鹤归', '叶霜序',
+    '谢长安', '温如玉', '凌未央', '宋清辞', '江渡月',
+    '卫晏然', '程无忧', '霍淮安', '方鹤鸣', '姜子默',
+  ],
+};
+
+function generateAINames(count: number, locale: string): string[] {
+  const pool = AI_NAMES[locale] || AI_NAMES.en;
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
 }
 
 function generateSpeakingOrder(players: { id: number; isHuman: boolean }[]): number[] {
@@ -72,7 +91,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   speakingOrder: [],
   currentSpeakerIndex: 0,
   discussionRound: 0,
-  aiPersonalities: [],
   locale: 'en',
   gameSessionId: '',
   winResult: null,
@@ -85,10 +103,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startGame: (config) => {
     const state = createInitialState(config);
-    const personalities = generatePersonalities(config.playerCount - 1, get().locale);
+    const aiNames = generateAINames(config.playerCount - 1, get().locale);
     const players = state.players.map((p, i) => {
       if (i === 0) return p;
-      return { ...p, name: personalities[i - 1].name };
+      return { ...p, name: aiNames[i - 1] };
     });
 
     const sessionId = `game_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -96,7 +114,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       ...state,
       players,
-      aiPersonalities: personalities,
       config,
       gameSessionId: sessionId,
       winResult: null,
@@ -109,12 +126,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   proceedToNight: () => set({ phase: 'night' }),
 
+  redealCards: () => {
+    const state = get();
+    const newState = createInitialState(state.config);
+    const aiNames = generateAINames(state.config.playerCount - 1, state.locale);
+    const players = newState.players.map((p, i) => {
+      if (i === 0) return p;
+      return { ...p, name: aiNames[i - 1] };
+    });
+    set({
+      ...newState,
+      players,
+      humanNightAction: null,
+      nightRevealed: null,
+    });
+  },
+
   setHumanNightAction: (action) => {
     const state = get();
+    const humanRole = state.players[state.humanPlayerIndex].originalRole;
     const result = resolveNightAction(state, action, state.humanPlayerIndex);
     set({
       humanNightAction: action,
-      nightRevealed: result.log.revealed || null,
+      nightRevealed: humanRole === 'insomniac' ? null : (result.log.revealed || null),
     });
   },
 
@@ -124,6 +158,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       state as GameState,
       state.humanNightAction
     );
+
+    let updatedNightRevealed = state.nightRevealed;
+    const humanRole = state.players[state.humanPlayerIndex].originalRole;
+    if (humanRole === 'insomniac') {
+      const insomniacLog = newState.nightActions.find(
+        (log) => log.actorIndex === state.humanPlayerIndex && log.role === 'insomniac'
+      );
+      if (insomniacLog?.revealed) {
+        updatedNightRevealed = insomniacLog.revealed;
+      }
+    }
+
     const order = generateSpeakingOrder(newState.players);
     set({
       ...newState,
@@ -132,6 +178,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       speakingOrder: order,
       currentSpeakerIndex: 0,
       discussionRound: 1,
+      nightRevealed: updatedNightRevealed,
     });
   },
 
@@ -176,17 +223,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const player = state.players[playerIndex];
     if (player.isHuman) return;
 
-    const personalityIdx = playerIndex - 1;
-    const personality = state.aiPersonalities[personalityIdx];
-    if (!personality) return;
-
     const nightLog = state.nightActions.find(
       (log) => log.actorIndex === playerIndex
     ) || null;
 
-    const context = {
+    const context: AIContext = {
       playerIndex,
-      personality,
       nightLog,
       locale: state.locale,
       discussionContext,
@@ -202,7 +244,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     try {
       const messages = buildChatMessages(state as GameState, context);
-      const response = await sendAIMessage(messages, aiContext);
+      const rawResponse = await sendAIMessage(messages, aiContext);
+      const response = sanitizeAIResponse(rawResponse, player.originalRole);
 
       const message: ChatMessage = {
         playerId: player.id,
@@ -271,42 +314,50 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ isProcessing: true });
     const newVotes = { ...state.votes };
 
-    for (const player of state.players) {
-      if (player.isHuman) continue;
+    const aiPlayers = state.players.filter((p) => !p.isHuman);
+    const voteResults = await Promise.allSettled(
+      aiPlayers.map(async (player) => {
+        const nightLog = state.nightActions.find(
+          (log) => log.actorIndex === player.id
+        ) || null;
 
-      const personalityIdx = player.id - 1;
-      const personality = state.aiPersonalities[personalityIdx];
-      const nightLog = state.nightActions.find(
-        (log) => log.actorIndex === player.id
-      ) || null;
+        const aiContext: AIRequestContext = {
+          gameSessionId: state.gameSessionId,
+          playerName: player.name,
+          phase: 'vote',
+        };
 
-      const aiContext: AIRequestContext = {
-        gameSessionId: state.gameSessionId,
-        playerName: player.name,
-        phase: 'vote',
-      };
+        try {
+          const messages = buildVoteChatMessages(state as GameState, {
+            playerIndex: player.id,
+            nightLog,
+            locale: state.locale,
+          });
+          const response = await sendAIMessage(messages, aiContext);
+          const playerNames = state.players
+            .filter((p) => p.id !== player.id)
+            .map((p) => p.name);
+          const votedName = parseVoteResponse(response, playerNames);
+          const votedPlayer = state.players.find((p) => p.name === votedName);
 
-      try {
-        const messages = buildVoteChatMessages(state as GameState, {
-          playerIndex: player.id,
-          personality,
-          nightLog,
-          locale: state.locale,
-        });
-        const response = await sendAIMessage(messages, aiContext);
-        const playerNames = state.players
-          .filter((p) => p.id !== player.id)
-          .map((p) => p.name);
-        const votedName = parseVoteResponse(response, playerNames);
-        const votedPlayer = state.players.find((p) => p.name === votedName);
-
-        if (votedPlayer) {
-          newVotes[player.id] = votedPlayer.id;
-        } else {
-          newVotes[player.id] = generateAIVote(state as GameState, player.id);
+          return {
+            playerId: player.id,
+            targetId: votedPlayer
+              ? votedPlayer.id
+              : generateAIVote(state as GameState, player.id),
+          };
+        } catch {
+          return {
+            playerId: player.id,
+            targetId: generateAIVote(state as GameState, player.id),
+          };
         }
-      } catch {
-        newVotes[player.id] = generateAIVote(state as GameState, player.id);
+      })
+    );
+
+    for (const result of voteResults) {
+      if (result.status === 'fulfilled') {
+        newVotes[result.value.playerId] = result.value.targetId;
       }
     }
 

@@ -14,6 +14,7 @@ export default function NightPhaseUI() {
   const setHumanNightAction = useGameStore((s) => s.setHumanNightAction);
   const executeNightPhase = useGameStore((s) => s.executeNightPhase);
   const nightRevealed = useGameStore((s) => s.nightRevealed);
+  const humanNightAction = useGameStore((s) => s.humanNightAction);
 
   const humanPlayer = players[humanPlayerIndex];
   const role = humanPlayer?.originalRole;
@@ -94,9 +95,6 @@ export default function NightPhaseUI() {
           <div className="font-pixel text-glow-cyan" style={{ fontSize: 18, color: 'var(--accent-cyan)' }}>
             {t(`roles.${role}`)}
           </div>
-          <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 8 }}>
-            {t(`roles.${role}Desc`)}
-          </div>
         </div>
 
         {!hasNightAction ? (
@@ -137,7 +135,10 @@ export default function NightPhaseUI() {
             {(role !== 'seer' || actionOption === 'player') && ['seer', 'robber', 'troublemaker', 'doppelganger'].includes(role) && (
               <div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
-                  {t('game.selectPlayer')}
+                  {role === 'seer' && t('game.selectPlayerSeer')}
+                  {role === 'robber' && t('game.selectPlayerRobber')}
+                  {role === 'troublemaker' && t('game.selectPlayerTroublemaker')}
+                  {role === 'doppelganger' && t('game.selectPlayerDoppelganger')}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                   {otherPlayers.map((p) => (
@@ -164,7 +165,7 @@ export default function NightPhaseUI() {
             {((role === 'seer' && actionOption === 'center') || role === 'drunk') && (
               <div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
-                  {t('game.selectCenter')}
+                  {role === 'seer' ? t('game.selectCenterSeer') : t('game.selectCenter')}
                 </div>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                   {[0, 1, 2].map((idx) => (
@@ -212,21 +213,65 @@ export default function NightPhaseUI() {
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-moon)', marginBottom: 12 }}>
               {t('game.nightResult')}
             </div>
-            {nightRevealed && nightRevealed.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {nightRevealed.map((r, i) => (
-                  <div key={i} style={{ fontSize: 14, color: 'var(--accent-cyan)' }}>
-                    {r.isCenterCard
-                      ? `${t('game.centerCardN', { num: r.targetIndex + 1 })}: ${t(`roles.${r.role}`)}`
-                      : `${players[r.targetIndex]?.name ?? '???'}: ${t(`roles.${r.role}`)}`}
+            {(() => {
+              if (role === 'troublemaker' && humanNightAction?.targets && humanNightAction.targets.length >= 2) {
+                const p1 = players.find((p) => p.id === humanNightAction.targets![0]);
+                const p2 = players.find((p) => p.id === humanNightAction.targets![1]);
+                return (
+                  <div style={{ fontSize: 14, color: 'var(--accent-cyan)' }}>
+                    {t('game.resultTroublemaker', { player1: p1?.name ?? '???', player2: p2?.name ?? '???' })}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                {role === 'troublemaker' ? t('game.cardsSwapped') : t('game.noInfoRevealed')}
-              </div>
-            )}
+                );
+              }
+              if (role === 'robber' && nightRevealed && nightRevealed.length > 0) {
+                const target = players.find((p) => p.id === nightRevealed[0].targetIndex);
+                return (
+                  <div style={{ fontSize: 14, color: 'var(--accent-cyan)' }}>
+                    {t('game.resultRobber', { player: target?.name ?? '???', role: t(`roles.${nightRevealed[0].role}`) })}
+                  </div>
+                );
+              }
+              if (role === 'drunk' && humanNightAction?.centerTargets && humanNightAction.centerTargets.length > 0) {
+                return (
+                  <div style={{ fontSize: 14, color: 'var(--accent-cyan)' }}>
+                    {t('game.resultDrunk', { num: humanNightAction.centerTargets[0] + 1 })}
+                  </div>
+                );
+              }
+              if (role === 'doppelganger' && nightRevealed && nightRevealed.length > 0) {
+                const target = players.find((p) => p.id === nightRevealed[0].targetIndex);
+                return (
+                  <div style={{ fontSize: 14, color: 'var(--accent-cyan)' }}>
+                    {t('game.resultDoppelganger', { player: target?.name ?? '???', role: t(`roles.${nightRevealed[0].role}`) })}
+                  </div>
+                );
+              }
+              if (role === 'insomniac' && (!nightRevealed || nightRevealed.length === 0)) {
+                return (
+                  <div style={{ fontSize: 14, color: 'var(--accent-moon)' }}>
+                    {t('game.resultInsomniacPending')}
+                  </div>
+                );
+              }
+              if (nightRevealed && nightRevealed.length > 0) {
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {nightRevealed.map((r, i) => (
+                      <div key={i} style={{ fontSize: 14, color: 'var(--accent-cyan)' }}>
+                        {r.isCenterCard
+                          ? `${t('game.centerCardN', { num: r.targetIndex + 1 })}: ${t(`roles.${r.role}`)}`
+                          : `${players[r.targetIndex]?.name ?? '???'}: ${t(`roles.${r.role}`)}`}
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              return (
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                  {t('game.noInfoRevealed')}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

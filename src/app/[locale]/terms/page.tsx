@@ -5,8 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 
 const SECTIONS = [
   { titleKey: 'legal.termsServiceTitle', contentKey: 'legal.termsServiceContent' },
+  { titleKey: 'legal.termsAiTitle', contentKey: 'legal.termsAiContent' },
+  { titleKey: 'legal.termsAcceptableUseTitle', contentKey: 'legal.termsAcceptableUseContent' },
+  { titleKey: 'legal.termsProhibitedContentTitle', contentKey: 'legal.termsProhibitedContentContent' },
   { titleKey: 'legal.termsAccountTitle', contentKey: 'legal.termsAccountContent' },
   { titleKey: 'legal.termsContentTitle', contentKey: 'legal.termsContentContent' },
+  { titleKey: 'legal.termsIpTitle', contentKey: 'legal.termsIpContent' },
+  { titleKey: 'legal.termsLiabilityTitle', contentKey: 'legal.termsLiabilityContent' },
+  { titleKey: 'legal.termsDisputeTitle', contentKey: 'legal.termsDisputeContent' },
   { titleKey: 'legal.termsChangesTitle', contentKey: 'legal.termsChangesContent' },
 ] as const;
 
@@ -28,7 +34,7 @@ export default function TermsPage() {
       </div>
 
       <div style={{ flex: 1, padding: '0 16px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8, padding: '0 4px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8, padding: '0 4px', whiteSpace: 'pre-line' }}>
           {t('legal.termsIntro')}
         </p>
 
@@ -37,7 +43,7 @@ export default function TermsPage() {
             <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: 12 }}>
               {t(section.titleKey)}
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-line' }}>
               {t(section.contentKey)}
             </p>
           </section>

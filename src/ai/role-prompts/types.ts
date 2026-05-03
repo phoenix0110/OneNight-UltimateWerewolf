@@ -5,5 +5,4 @@ export interface RolePromptConfig {
   teamObjective: string;
   nightInfoUsage: string | Record<string, string>;
   strategy: Record<string, string | Record<string, string>>;
-  speechGuidelines: string | Record<string, string>;
 }

@@ -1,4 +1,4 @@
-import { NightActionLog } from '@/engine/game-state';
+import { NightActionLog, Player } from '@/engine/game-state';
 import { RoleId } from '@/engine/roles';
 
 import { getRolePromptConfigs } from './role-prompts';
@@ -15,6 +15,156 @@ const NIGHT_ORDER: Record<string, number> = {
   drunk: 8,
   insomniac: 9,
 };
+
+const ROLE_NAMES_ZH: Record<string, string> = {
+  werewolf: '狼人', seer: '预言家', robber: '强盗', troublemaker: '捣蛋鬼',
+  villager: '村民', insomniac: '失眠者', drunk: '酒鬼', hunter: '猎人',
+  tanner: '皮匠', minion: '爪牙', mason: '共济会', doppelganger: '化身幽灵',
+};
+
+function roleCn(role: RoleId): string {
+  return ROLE_NAMES_ZH[role] ?? role;
+}
+
+/**
+ * Builds a structured knowledge board for an AI player based on what they
+ * can privately deduce from their own night action. Makes swap-chain
+ * implications EXPLICIT so the LLM doesn't have to reason them out.
+ */
+export function buildKnowledgeBoard(
+  playerIndex: number,
+  originalRole: RoleId,
+  nightActions: NightActionLog[],
+  players: Player[],
+): string {
+  const pn = (idx: number) => players.find(p => p.id === idx)?.name ?? `玩家${idx}`;
+  const myLog = nightActions.find(l => l.actorIndex === playerIndex) ?? null;
+  const lines: string[] = ['=== 你的私有推理板 ==='];
+
+  lines.push(`你的初始身份：${roleCn(originalRole)}`);
+
+  switch (originalRole) {
+    case 'werewolf': {
+      if (myLog?.revealed?.length) {
+        const otherWolves = myLog.revealed.filter(r => !r.isCenterCard);
+        const centerCards = myLog.revealed.filter(r => r.isCenterCard);
+        if (otherWolves.length > 0) {
+          const names = otherWolves.map(r => pn(r.targetIndex));
+          lines.push(`你看到的狼人同伴：${names.join('、')}`);
+          lines.push('注意：这是夜间第2步的信息，后续强盗/捣蛋鬼/酒鬼可能改变了牌的位置。');
+          lines.push('你和同伴的初始身份都是狼人，但当前持有的牌可能已被换走。');
+        }
+        if (centerCards.length > 0) {
+          lines.push(`你是独狼，偷看了底牌：${centerCards.map(r => `底牌#${r.targetIndex + 1}=${roleCn(r.role as RoleId)}`).join('、')}`);
+          lines.push('该角色在底牌中，不在任何玩家手上。');
+        }
+      }
+      break;
+    }
+    case 'seer': {
+      if (myLog?.revealed?.length) {
+        const playerReveals = myLog.revealed.filter(r => !r.isCenterCard);
+        const centerReveals = myLog.revealed.filter(r => r.isCenterCard);
+        if (playerReveals.length > 0) {
+          const r = playerReveals[0];
+          lines.push(`你查看了${pn(r.targetIndex)}的牌：${roleCn(r.role as RoleId)}`);
+          lines.push('注意：这是第5步查看的，是强盗交换前的状态。后续强盗/捣蛋鬼/酒鬼交换可能改变了该玩家的当前身份。');
+        }
+        if (centerReveals.length > 0) {
+          lines.push(`你查看了底牌：${centerReveals.map(r => `底牌#${r.targetIndex + 1}=${roleCn(r.role as RoleId)}`).join('、')}`);
+          lines.push('这些角色在底牌中，不在任何玩家手上（除非酒鬼换走了其中一张）。');
+        }
+      }
+      break;
+    }
+    case 'robber': {
+      if (myLog?.revealed?.length && myLog?.swapped) {
+        const stolen = myLog.revealed[0];
+        const targetName = pn(stolen.targetIndex);
+        const stolenRole = roleCn(stolen.role as RoleId);
+        lines.push(`你抢了${targetName}的牌，看到是${stolenRole}`);
+        lines.push(`交换结果：你现在持有【${stolenRole}】牌，${targetName}现在持有【强盗】牌（${targetName}不知情）`);
+        lines.push(`关键：${targetName}仍然认为自己是${stolenRole}，但实际已变成强盗。`);
+        if (stolen.role === 'werewolf') {
+          lines.push('你偷到了狼人牌，你现在属于狼人阵营！目标变为：不让任何狼人被投死。');
+        }
+        lines.push('注意：捣蛋鬼（第7步）可能在你之后又交换了你或目标的牌。');
+      }
+      break;
+    }
+    case 'troublemaker': {
+      if (myLog?.swapped) {
+        const nameA = pn(myLog.swapped.a);
+        const nameB = pn(myLog.swapped.b);
+        lines.push(`你交换了${nameA}和${nameB}的牌`);
+        lines.push(`交换结果：${nameA}现在持有${nameB}的原始牌，${nameB}现在持有${nameA}的原始牌（双方都不知情）`);
+        lines.push(`关键：${nameA}和${nameB}都仍认为自己是原来的身份，但实际持有的牌已互换。`);
+        lines.push('注意：如果强盗（第6步）先抢了其中一人的牌，你交换的是被抢后的状态。');
+      }
+      break;
+    }
+    case 'insomniac': {
+      if (myLog?.revealed?.length) {
+        const finalRole = roleCn(myLog.revealed[0].role as RoleId);
+        const changed = myLog.revealed[0].role !== 'insomniac';
+        if (changed) {
+          lines.push(`你最终查看自己的牌：${finalRole}（已被换！）`);
+          lines.push('这是第9步的最终状态，所有交换后的结果，最可靠。');
+          lines.push('有人在夜间换了你的牌。根据变成的角色推断是谁换的。');
+        } else {
+          lines.push('你最终查看自己的牌：仍是失眠者（没有被换）');
+          lines.push('没有人交换过你的牌。任何声称交换了你的人在撒谎。');
+        }
+      }
+      break;
+    }
+    case 'minion': {
+      if (myLog?.revealed?.length) {
+        const wolves = myLog.revealed.map(r => pn(r.targetIndex));
+        lines.push(`你看到的狼人：${wolves.join('、')}`);
+        lines.push('你的目标是保护狼人不被投死。你被投死而狼人存活=你赢。');
+      } else {
+        lines.push('没有看到狼人（两张狼人牌都在底牌中）。');
+      }
+      break;
+    }
+    case 'mason': {
+      if (myLog?.revealed?.length) {
+        const partners = myLog.revealed.map(r => pn(r.targetIndex));
+        lines.push(`你看到的共济会同伴：${partners.join('、')}`);
+      } else {
+        lines.push('没有看到其他共济会成员，另一张在底牌中。');
+      }
+      break;
+    }
+    case 'drunk': {
+      lines.push('你和一张底牌交换了，但不知道拿到了什么角色。');
+      lines.push('你可能变成了任何角色，包括狼人。');
+      break;
+    }
+    case 'doppelganger': {
+      if (myLog?.revealed?.length) {
+        const copied = myLog.revealed[0];
+        lines.push(`你查看了${pn(copied.targetIndex)}，复制成为了${roleCn(copied.role as RoleId)}`);
+      }
+      break;
+    }
+    default: {
+      lines.push('你没有夜间行动，没有额外信息。靠逻辑推理判断。');
+      break;
+    }
+  }
+
+  lines.push('');
+  lines.push('重要概念：初始身份≠当前身份');
+  lines.push('- 强盗抢牌后：目标变为强盗牌（不知情），强盗变为目标的牌');
+  lines.push('- 捣蛋鬼换牌后：两人互换牌（都不知情），各自仍认为是原身份');
+  lines.push('- 酒鬼换牌后：酒鬼变为底牌角色（不知情）');
+  lines.push('- 玩家声称的身份=他们认为的初始身份，不一定是当前实际持有的牌');
+  lines.push('- 关键：夜间能力只属于原始持有者，被换牌者不会获得新牌的夜间能力');
+
+  return lines.join('\n');
+}
 
 function renderField(value: string | Record<string, string | Record<string, string>>): string {
   if (typeof value === 'string') return value;
@@ -62,69 +212,128 @@ function renderRoleStrategySection(config: RolePromptConfig): string {
   lines.push('策略：');
   lines.push(renderField(config.strategy));
 
-  lines.push('');
-  lines.push('发言风格：');
-  lines.push(renderField(config.speechGuidelines));
+  return lines.join('\n');
+}
+
+const LANG_INSTRUCTION_ZH = '你必须用简体中文回复。所有发言、推理和指控都必须用中文。';
+const LANG_INSTRUCTION_EN = 'CRITICAL OUTPUT RULE: You MUST respond in native-speaker-level English. All your speech, reasoning, and accusations must be in English. The instructions below are in Chinese but your OUTPUT must be entirely in English.';
+
+function buildRoleDistribution(gameRoles: RoleId[]): string {
+  const roleCounts: Record<string, number> = {};
+  for (const r of gameRoles) {
+    const config = getRolePromptConfigs()[r];
+    const name = config?.role ?? r;
+    roleCounts[name] = (roleCounts[name] || 0) + 1;
+  }
+  const playerCount = gameRoles.length - 3;
+  const roleList = Object.entries(roleCounts)
+    .map(([name, count]) => `${name}x${count}`)
+    .join('、');
+  return `本局配置（${playerCount}人+3底牌）：${roleList}`;
+}
+
+function buildNightInfoBlock(
+  nightInfo: NightActionLog,
+  originalRole: RoleId,
+  playerNames: Record<number, string>
+): string {
+  const myOrder = NIGHT_ORDER[originalRole] ?? 99;
+  const pn = (idx: number) => playerNames[idx] ?? `玩家${idx}`;
+  const lines: string[] = [];
+
+  lines.push(`夜间行动（第${myOrder}步）：${nightInfo.description}`);
+
+  if (nightInfo.revealed && nightInfo.revealed.length > 0) {
+    lines.push('你看到：');
+    for (const r of nightInfo.revealed) {
+      if (r.isCenterCard) {
+        lines.push(`  - 底牌#${r.targetIndex + 1}：${r.role}`);
+      } else {
+        lines.push(`  - ${pn(r.targetIndex)}：${r.role}`);
+      }
+    }
+  }
+
+  if (nightInfo.swapped) {
+    lines.push(`牌被交换：${pn(nightInfo.swapped.a)} ↔ ${pn(nightInfo.swapped.b)}`);
+  }
 
   return lines.join('\n');
 }
 
-const LANG_INSTRUCTION_ZH = '你必须用中文（简体中文）回复。所有发言、推理和指控都必须用中文。';
-const LANG_INSTRUCTION_EN = 'CRITICAL OUTPUT RULE: You MUST respond in fluent, natural, native-speaker-level English. All your speech, reasoning, and accusations must be in English. The instructions below are in Chinese but your OUTPUT must be entirely in English.';
-
+/**
+ * System prompt: stable per player per game. Contains persona, rules, role info,
+ * night info, knowledge board, and role distribution. Maximizes cacheable prefix.
+ */
 export function buildSystemPrompt(
   roleName: RoleId,
-  personalityPrompt: string,
-  locale: string
+  playerName: string,
+  locale: string,
+  knowledgeBoard: string,
+  nightInfo: NightActionLog | null,
+  gameRoles: RoleId[],
+  playerNames?: Record<number, string>,
 ): string {
   const config = getRolePromptConfigs()[roleName];
   const langInstruction = locale === 'zh' ? LANG_INSTRUCTION_ZH : LANG_INSTRUCTION_EN;
 
-  return `你正在玩一夜终极狼人杀。${personalityPrompt}
+  const nightBlock = nightInfo
+    ? buildNightInfoBlock(nightInfo, roleName, playerNames ?? {})
+    : '你没有夜间行动，没有直接信息。';
 
+  return `你是${playerName}，正在玩一夜终极狼人杀。
 ${langInstruction}
 
-核心规则：
-- 绝对不要暴露你是AI。以人类玩家的身份游戏。
-- 严格字数限制：回复最多1-3句话。绝不超过3句。简洁、有策略、符合角色。
-- 你必须说一些有意义的内容。不要说你没什么好说的。
-- 被交换的目标在夜间不会被通知。绝不要说"如果你真的换了我，我会知道的"。
+输出规则：
+- 你的回复将直接作为公开发言，所有玩家都能看到
+- 禁止输出内心想法独白、推理过程、角色分析。不要输出错误的思考过程
+- 只输出你要对其他玩家说的话，2-3句，60字以内
+- 不暴露AI身份
 
-${renderRoleCoreSection(config)}`;
+游戏规则：
+- 被交换的玩家(不管是被强盗，捣蛋鬼，酒鬼交换)不会被通知。不要假设被交换玩家会知道自己的身份被换了，除非场上已经有人公开交换信息
+- 夜间能力属于原始角色玩家：被换了牌不会获得新牌的能力。例如村民被换成失眠者牌，该村民不会有失眠者的查看能力
+- 被换了牌的玩家可以正常使用原始角色的夜间能力，不要假设被换了牌的玩家会失去原始角色的夜间能力
+- 严禁篡改或错误引用他人发言。引用时必须准确
+- 独立思考，用夜间信息验证他人逻辑，不盲从
+- 不要抓住玩家发言的用词细节，而是关注逻辑和推理过程
+- 被指控时要求具体证据，信息矛盾时坚定反驳
+- 第一轮不公开身份很正常，第二轮仍不公开则非常可疑
+- 好人阵营如果确定自己身份仍然属于阵营好人，则在第二轮公开身份，确保可以推理狼坑
+
+${renderRoleCoreSection(config)}
+
+${nightBlock}
+
+${knowledgeBoard}
+
+${buildRoleDistribution(gameRoles)}`;
 }
 
 export function buildVoteSystemPrompt(
   roleName: RoleId,
   playerName: string,
-  locale: string
+  locale: string,
+  knowledgeBoard: string,
 ): string {
   const config = getRolePromptConfigs()[roleName];
   const langInstruction = locale === 'zh' ? LANG_INSTRUCTION_ZH : LANG_INSTRUCTION_EN;
 
-  return `你是${playerName}，正在玩一夜终极狼人杀。${config.identity}
+  return `你是${playerName}，正在玩一夜狼人杀。${config.identity}
 阵营目标：${config.teamObjective}
 ${langInstruction}
+
+${knowledgeBoard}
+
 只回复一个玩家的名字，不要回复其他任何内容。`;
 }
 
 export function buildReferenceRules(roleName: RoleId): string {
   const config = getRolePromptConfigs()[roleName];
 
-  return `【参考规则——首次提供，后续轮次省略】
-
-游戏规则：
-- 狼人隐藏在村民中。夜间各角色执行秘密行动。白天讨论找狼人，投票淘汰。
-
-夜间行动顺序：
-1.化身幽灵(复制) 2.狼人(确认/偷看底牌) 3.爪牙(看狼人) 4.共济会(互认)
-5.预言家(查看) 6.强盗(交换并看牌) 7.捣蛋鬼(交换两人) 8.酒鬼(换底牌) 9.失眠者(看自己牌)
-
-关键时序：预言家(5)在交换前查看→信息可能过时。强盗(6)在捣蛋鬼(7)前→链条：原始→强盗换→捣蛋鬼换→最终。失眠者(9)最后看牌→最可靠。
-
-判断声明：
-- 声称角色并给出只有该角色知道的具体信息=强证据。
-- 两人声称同一角色→其中一人撒谎。数角色总数（玩家+3底牌）检测矛盾。
-- 关注逻辑一致性，不要被语气/自信程度/发言顺序干扰。
+  return `行动顺序：1.化身幽灵 2.狼人 3.爪牙 4.共济会 5.预言家 6.强盗 7.捣蛋鬼 8.酒鬼 9.失眠者
+交换链：原始→强盗换→捣蛋鬼换→酒鬼换→最终。失眠者最后看牌最可靠。
+判断：两人声称同一角色→必有人撒谎。统计声称身份对比配置找矛盾。除失眠者外，玩家不一定知道最终身份。
 
 ${renderRoleStrategySection(config)}`;
 }
@@ -136,140 +345,56 @@ export interface DiscussionContext {
   maxRounds?: number;
 }
 
-function buildNightInfoBlock(nightInfo: NightActionLog, originalRole: RoleId): string {
-  const myOrder = NIGHT_ORDER[originalRole] ?? 99;
-  const lines: string[] = [];
-
-  lines.push(`=== 你的夜间行动（第${myOrder}步） ===`);
-  lines.push(nightInfo.description);
-
-  if (nightInfo.revealed && nightInfo.revealed.length > 0) {
-    lines.push('');
-    lines.push('你看到的信息：');
-    for (const r of nightInfo.revealed) {
-      if (r.isCenterCard) {
-        lines.push(`  - 底牌 #${r.targetIndex + 1}：${r.role}`);
-      } else {
-        lines.push(`  - 玩家位置 ${r.targetIndex}：${r.role}`);
-      }
-    }
-  }
-
-  if (nightInfo.swapped) {
-    lines.push('');
-    lines.push(`牌被交换：位置 ${nightInfo.swapped.a} ↔ 位置 ${nightInfo.swapped.b}`);
-  }
-
-  lines.push('');
-  if (myOrder <= 5) {
-    lines.push(
-      '时间提示：你的行动发生在强盗（第6步）、捣蛋鬼（第7步）和酒鬼（第8步）之前。' +
-      '你获得的任何信息都可能已被后续交换改变。' +
-      '如果有人声称是强盗或捣蛋鬼并说他们交换了你查看过的玩家，' +
-      '那个玩家的角色现在可能和你看到的不同。'
-    );
-  } else if (originalRole === 'robber') {
-    lines.push(
-      '时间提示：你在第6步行动（在预言家之后，捣蛋鬼/酒鬼之前）。' +
-      '你偷到的角色是目标在预言家查看之后、捣蛋鬼交换之前持有的。' +
-      '如果捣蛋鬼把你和别人交换了，你偷来的角色就到了那个人手里。'
-    );
-  } else if (originalRole === 'troublemaker') {
-    lines.push(
-      '时间提示：你在第7步行动（在强盗之后，酒鬼/失眠者之前）。' +
-      '你交换的两名玩家现在持有彼此在强盗行动之后的角色。' +
-      '如果强盗偷了你交换目标之一的牌，链条是：强盗偷牌 → 然后你的交换。'
-    );
-  } else if (originalRole === 'drunk') {
-    lines.push(
-      '时间提示：你在第8步行动（在除失眠者外的所有行动之后）。' +
-      '你把自己的牌和底牌交换了，但不知道变成了什么。' +
-      '只有失眠者（第9步）能揭示你的牌发生了什么。'
-    );
-  } else if (originalRole === 'insomniac') {
-    lines.push(
-      '时间提示：你最后行动（第9步），在所有交换之后。' +
-      '你看到的牌是你真正的最终角色——游戏中最可靠的信息。' +
-      '如果你的牌从失眠者变成了其他角色，强盗、捣蛋鬼或酒鬼一定换了你。'
-    );
-  }
-
-  lines.push('');
-  lines.push(
-    '用这些信息构建逻辑论证。' +
-    '在讨论中将你的夜间信息与其他人的声明交叉验证。' +
-    '如果声明与你看到的矛盾，有人在撒谎。'
-  );
-
-  return lines.join('\n');
-}
-
+/**
+ * User prompt: dynamic per turn. Only chat history + position/round hints.
+ * Static content (night info, role distribution, knowledge board) lives in system prompt.
+ */
 export function buildDiscussionPrompt(
-  nightInfo: NightActionLog | null,
   chatHistory: { name: string; text: string }[],
-  currentRole: RoleId,
-  originalRole: RoleId,
   context?: DiscussionContext,
-  referenceRules?: string
+  referenceRules?: string,
+  playerNames?: Record<number, string>,
 ): string {
   const recentChat = chatHistory
     .map((m) => `${m.name}: ${m.text}`)
     .join('\n');
-
-  let nightContext = '';
-  if (nightInfo) {
-    nightContext = '\n' + buildNightInfoBlock(nightInfo, originalRole);
-  } else {
-    nightContext = '\n你没有夜间行动。你整晚都在睡觉，没有任何直接信息。';
-  }
-
-  const yourSituation =
-    currentRole !== originalRole
-      ? `\n重要：你的角色在夜间被交换了！你开始是${originalRole}，但你的牌现在是${currentRole}。这可能影响你的阵营归属。思考：谁可能交换了你（强盗在第6步，捣蛋鬼在第7步，或酒鬼在第8步）？`
-      : '';
 
   let positionHint = '';
   let roundHint = '';
   if (context) {
     const { speakingPosition, totalSpeakers, currentRound, maxRounds } = context;
     if (speakingPosition <= 1) {
-      positionHint = '\n你是最先发言的人之一。定下基调，做出声明，或提出试探性问题。';
+      positionHint = '\n你先发言。主动声明或提问。';
     } else if (speakingPosition >= totalSpeakers - 1) {
-      positionHint = '\n你是最后发言的人之一。分析矛盾，质疑可疑陈述。不要简单重复别人说过的话。';
+      positionHint = '\n你最后发言。总结矛盾，不要重复别人的话。';
     } else {
-      positionHint = '\n你在讨论中间发言。回应已有内容——批判性思考，质疑你不同意的共识。';
+      positionHint = '\n回应前面的发言，质疑你不认同的部分。';
     }
     if (currentRound && maxRounds) {
       if (currentRound >= maxRounds) {
-        roundHint = `\n⚠ 最后一轮讨论（第${currentRound}/${maxRounds}轮）。说出最关键的信息或做出最终判断。`;
+        roundHint = `\n最后一轮（第${currentRound}/${maxRounds}轮）。说出最关键信息或最终判断。`;
       } else {
-        roundHint = `\n当前是第${currentRound}/${maxRounds}轮讨论。`;
+        roundHint = `\n第${currentRound}/${maxRounds}轮讨论。`;
       }
     }
   }
 
-  const referenceBlock = referenceRules ? `\n\n${referenceRules}` : '';
+  const referenceBlock = referenceRules ? `\n${referenceRules}\n` : '';
 
-  return `${nightContext}${yourSituation}${roundHint}${positionHint}${referenceBlock}
+  // Suppress unused parameter lint — playerNames reserved for future claim-tracking
+  void playerNames;
 
-分析指导：
-- 检查所有声明是否形成一致的身份链。矛盾在哪里？
-- 追踪交换链：原始角色→强盗换→捣蛋鬼换→酒鬼换→最终角色。
-- 不要盲目同意上一个发言者。根据所有证据形成你自己的结论。
-- 如果某人的声明包含关于你的正确细节，这是他们说真话的证据。
-
-最近的讨论：
+  return `${roundHint}${positionHint}${referenceBlock}
+讨论记录：
 ${recentChat || '（还没有人发言）'}
 
-轮到你发言了。根据你的角色和性格做出策略性发言。说一些有意义的内容——分享信息、做出声明、质疑某人，或指出矛盾。`;
+轮到你发言。`;
 }
 
 export function buildVotePrompt(
   chatHistory: { name: string; text: string }[],
   playerNames: string[],
   nightInfo: NightActionLog | null,
-  votePersonalityPrompt: string,
-  _locale: string = 'en'
 ): string {
   const recentChat = chatHistory
     .map((m) => `${m.name}: ${m.text}`)
@@ -279,15 +404,9 @@ export function buildVotePrompt(
     ? `你在夜间得到的信息：${nightInfo.description}\n`
     : '';
 
-  return `${nightContext}
-讨论摘要：
+  return `${nightContext}讨论摘要：
 ${recentChat}
 
 可投票的玩家：${playerNames.join('、')}
-
-投票性格：${votePersonalityPrompt}
-
-根据讨论内容、你的夜间信息和你的性格，你投票淘汰谁？
-思考：谁的辩护最薄弱？谁的声明与其他人矛盾？根据逻辑证据，你认为谁最可能是狼人？
-只回复玩家的名字，不要回复其他任何内容。`;
+根据讨论和你的夜间信息，谁最可能是狼人？只回复一个名字。`;
 }

@@ -118,11 +118,11 @@ export async function canStartGame(userId: string): Promise<{ allowed: boolean; 
   try {
     const userRef = doc(db, 'users', userId);
     const snap = await getDoc(userRef);
-    if (!snap.exists()) return { allowed: true, gamesRemaining: 1 };
+    if (!snap.exists()) return { allowed: true, gamesRemaining: 2 };
 
     const data = snap.data();
     const sub = data.subscription;
-    if (!sub) return { allowed: true, gamesRemaining: 1 };
+    if (!sub) return { allowed: true, gamesRemaining: 2 };
 
     const remaining = sub.gamesRemaining ?? 0;
     return { allowed: remaining > 0, gamesRemaining: remaining };

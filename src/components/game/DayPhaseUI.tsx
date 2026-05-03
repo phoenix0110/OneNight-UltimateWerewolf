@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+
+import { ChatMessage } from '@/engine/game-state';
 import { MAX_DISCUSSION_ROUNDS } from '@/engine/game-rules';
 import { useGameStore } from '@/store/game-store';
+
 import DaySceneFrame from './DaySceneFrame';
 import DiscussionLogPanel from './DiscussionLogPanel';
 import PhaseHeader from './PhaseHeader';
@@ -24,9 +27,12 @@ export default function DayPhaseUI() {
   const getBuiltInSpeechesStore = useGameStore((s) => s.getBuiltInSpeeches);
   const getFilledSpeech = useGameStore((s) => s.getFilledSpeech);
   const nightRevealed = useGameStore((s) => s.nightRevealed);
+  const humanNightAction = useGameStore((s) => s.humanNightAction);
+  const humanPlayerIndex = useGameStore((s) => s.humanPlayerIndex);
 
   const [message, setMessage] = useState('');
   const [showQuickSpeech, setShowQuickSpeech] = useState(false);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const hasStartedRef = useRef(false);
 
   const builtInSpeeches = getBuiltInSpeechesStore();
@@ -44,6 +50,15 @@ export default function DayPhaseUI() {
   const thinkingPlayer = thinkingPlayerId !== null ? players.find((p) => p.id === thinkingPlayerId) ?? null : null;
   const isLastRound = discussionRound >= MAX_DISCUSSION_ROUNDS;
   const canStartNextRound = roundComplete && !isLastRound;
+
+  const selectedPlayerMessages = useMemo(() => {
+    if (selectedPlayerId === null) return [];
+    return chatMessages.filter((m) => m.playerId === selectedPlayerId);
+  }, [chatMessages, selectedPlayerId]);
+
+  const selectedPlayerName = selectedPlayerId !== null
+    ? players.find((p) => p.id === selectedPlayerId)?.name ?? ''
+    : '';
 
   // Auto-start discussion
   const startDiscussion = useCallback(() => {
@@ -91,171 +106,333 @@ export default function DayPhaseUI() {
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 640, margin: '0 auto', width: '100%' }}>
-      {/* Phase HUD */}
-      <PhaseHeader
-        icon="☀️"
-        title={t('game.day')}
-        accentColor="moon"
-        subtitle={
-          currentSpeaker && !roundComplete
-            ? currentSpeaker.isHuman
-              ? t('game.yourTurn')
-              : `${currentSpeaker.name} ${t('game.isSpeaking')}`
-            : roundComplete && isLastRound
-              ? t('game.proceedToVote')
-              : roundComplete
-                ? t('game.nextRound')
-                : undefined
-        }
-        badge={
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 99 }}>
-            {t('game.roundInfo', { current: discussionRound, max: MAX_DISCUSSION_ROUNDS })}
-          </span>
-        }
-      />
-
-      {/* Village Square Scene */}
-      <DaySceneFrame
-        players={players}
-        currentSpeakerId={currentSpeakerId}
-        thinkingPlayerId={thinkingPlayerId}
-        currentSpeakerIndex={currentSpeakerIndex}
-        speakingOrder={speakingOrder}
-      />
-
-      {/* Speaking order strip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', overflowX: 'auto' }}>
-        {speakingOrder.map((id, idx) => {
-          const p = players.find((pl) => pl.id === id);
-          if (!p) return null;
-          const isCurrent = idx === currentSpeakerIndex;
-          const isDone = idx < currentSpeakerIndex;
-          return (
-            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              {idx > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>→</span>}
-              <span style={{
-                fontSize: 12, padding: '2px 8px', borderRadius: 99, transition: 'all 0.15s',
-                background: isCurrent ? 'rgba(246,211,101,0.2)' : 'transparent',
-                color: isCurrent ? 'var(--accent-moon)' : isDone ? 'var(--text-muted)' : 'var(--text-secondary)',
-                fontWeight: isCurrent ? 600 : 400,
-                textDecoration: isDone ? 'line-through' : 'none',
-                opacity: isDone ? 0.5 : 1,
-              }}>
-                {p.name}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Your Turn Banner */}
-      {isHumanTurn && (
-        <div style={{
-          margin: '0 16px 8px', padding: '8px 16px', borderRadius: 8, textAlign: 'center',
-          background: 'rgba(89,208,255,0.1)', border: '1px solid rgba(89,208,255,0.3)',
-        }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)' }}>
-            🎤 {t('game.yourTurn')}
-          </span>
-        </div>
-      )}
-
-      {/* Discussion Log */}
-      <div style={{ flex: 1, padding: '0 16px 8px', minHeight: 0, display: 'flex', flexDirection: 'column', maxHeight: 340 }}>
-        <DiscussionLogPanel
-          messages={chatMessages}
-          players={players}
-          thinkingPlayer={thinkingPlayer}
-          emptyText={t('game.dayDesc')}
+    <div className="day-phase-split" style={{ flex: 1, display: 'flex', width: '100%', maxWidth: 1100, margin: '0 auto' }}>
+      {/* Left Column: Chat + Controls */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: 640 }}>
+        {/* Phase HUD */}
+        <PhaseHeader
+          icon="☀️"
+          title={t('game.day')}
+          accentColor="moon"
+          subtitle={
+            currentSpeaker && !roundComplete
+              ? currentSpeaker.isHuman
+                ? t('game.yourTurn')
+                : `${currentSpeaker.name} ${t('game.isSpeaking')}`
+              : roundComplete && isLastRound
+                ? t('game.proceedToVote')
+                : roundComplete
+                  ? t('game.nextRound')
+                  : undefined
+          }
+          badge={
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 99 }}>
+              {t('game.roundInfo', { current: discussionRound, max: MAX_DISCUSSION_ROUNDS })}
+            </span>
+          }
         />
+
+        {/* Night Info Summary */}
+        <NightInfoPanel
+          nightRevealed={nightRevealed}
+          humanNightAction={humanNightAction}
+          players={players}
+          humanPlayerIndex={humanPlayerIndex}
+          t={t}
+        />
+
+        {/* Speaking order strip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', overflowX: 'auto' }}>
+          {speakingOrder.map((id, idx) => {
+            const p = players.find((pl) => pl.id === id);
+            if (!p) return null;
+            const isCurrent = idx === currentSpeakerIndex;
+            const isDone = idx < currentSpeakerIndex;
+            return (
+              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                {idx > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>→</span>}
+                <span style={{
+                  fontSize: 12, padding: '2px 8px', borderRadius: 99, transition: 'all 0.15s',
+                  background: isCurrent ? 'rgba(246,211,101,0.2)' : 'transparent',
+                  color: isCurrent ? 'var(--accent-moon)' : isDone ? 'var(--text-muted)' : 'var(--text-secondary)',
+                  fontWeight: isCurrent ? 600 : 400,
+                  textDecoration: isDone ? 'line-through' : 'none',
+                  opacity: isDone ? 0.5 : 1,
+                }}>
+                  {p.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Your Turn Banner */}
+        {isHumanTurn && (
+          <div style={{
+            margin: '0 16px 8px', padding: '8px 16px', borderRadius: 8, textAlign: 'center',
+            background: 'rgba(89,208,255,0.1)', border: '1px solid rgba(89,208,255,0.3)',
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)' }}>
+              🎤 {t('game.yourTurn')}
+            </span>
+          </div>
+        )}
+
+        {/* Discussion Log */}
+        <div style={{ flex: 1, padding: '0 16px 8px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <DiscussionLogPanel
+            messages={chatMessages}
+            players={players}
+            thinkingPlayer={thinkingPlayer}
+            emptyText={t('game.dayDesc')}
+          />
+        </div>
+
+        {/* Human Input Area */}
+        {isHumanTurn && (
+          <div style={{ padding: '0 16px 8px' }}>
+            {showQuickSpeech && (
+              <div className="panel custom-scroll" style={{ padding: 12, marginBottom: 8, maxHeight: 160, overflowY: 'auto' }}>
+                <div style={{ fontSize: 12, color: 'var(--accent-moon)', fontWeight: 600, marginBottom: 8 }}>
+                  {t('game.quickSpeech')}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {filledSpeeches.map(({ speech, text }) => (
+                    <button
+                      key={speech.id}
+                      onClick={() => handleQuickSpeech(text)}
+                      className="btn btn-secondary"
+                      style={{ textAlign: 'left', fontSize: 13, padding: '8px 12px', minHeight: 0 }}
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setShowQuickSpeech(!showQuickSpeech)}
+                className="btn btn-secondary"
+                style={{ padding: '0 12px', minHeight: 44 }}
+                title={t('game.quickSpeech')}
+              >
+                💬
+              </button>
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                className="input"
+                style={{ flex: 1 }}
+                placeholder={t('game.typeMessage')}
+              />
+              <button onClick={handleSend} className="btn btn-success" style={{ padding: '0 16px', minHeight: 44, fontSize: 13 }}>
+                {t('game.send')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Final round notice */}
+        {roundComplete && isLastRound && (
+          <div style={{
+            margin: '0 16px 8px', padding: '8px 16px', borderRadius: 8, textAlign: 'center',
+            background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-red)' }}>
+              {t('game.finalRound')}
+            </span>
+          </div>
+        )}
+
+        {/* Action Footer */}
+        <div className="sticky-footer" style={{ display: 'flex', gap: 12, padding: 16 }}>
+          <button
+            onClick={() => { if (window.confirm(t('game.quitConfirm'))) resetGame(); }}
+            className="btn btn-ghost"
+            style={{ fontSize: 13, padding: '0 12px', minWidth: 0, flexShrink: 0 }}
+          >
+            ✕
+          </button>
+          {canStartNextRound && (
+            <button onClick={handleNextRound} className="btn btn-secondary" style={{ flex: 1, fontSize: 13 }}>
+              🔄 {t('game.nextRound')}
+            </button>
+          )}
+          <button
+            onClick={proceedToVote}
+            disabled={isProcessing}
+            className="btn btn-danger"
+            style={{ flex: 1, fontSize: 13 }}
+          >
+            {t('game.proceedToVote')} →
+          </button>
+        </div>
       </div>
 
-      {/* Human Input Area */}
-      {isHumanTurn && (
-        <div style={{ padding: '0 16px 8px' }}>
-          {/* Quick speech drawer */}
-          {showQuickSpeech && (
-            <div className="panel custom-scroll" style={{ padding: 12, marginBottom: 8, maxHeight: 160, overflowY: 'auto' }}>
-              <div style={{ fontSize: 12, color: 'var(--accent-moon)', fontWeight: 600, marginBottom: 8 }}>
-                {t('game.quickSpeech')}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {filledSpeeches.map(({ speech, text }) => (
-                  <button
-                    key={speech.id}
-                    onClick={() => handleQuickSpeech(text)}
-                    className="btn btn-secondary"
-                    style={{ textAlign: 'left', fontSize: 13, padding: '8px 12px', minHeight: 0 }}
-                  >
-                    {text}
-                  </button>
-                ))}
-              </div>
+      {/* Right Column: Round Table */}
+      <div className="day-phase-right" style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: 16, minWidth: 0, position: 'relative',
+      }}>
+        <DaySceneFrame
+          players={players}
+          currentSpeakerId={currentSpeakerId}
+          thinkingPlayerId={thinkingPlayerId}
+          currentSpeakerIndex={currentSpeakerIndex}
+          speakingOrder={speakingOrder}
+          onPlayerClick={(id) => setSelectedPlayerId(id === selectedPlayerId ? null : id)}
+        />
+
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
+          {t('game.clickToViewHistory')}
+        </div>
+
+        {/* Speech History Popover */}
+        {selectedPlayerId !== null && (
+          <SpeechHistoryPopover
+            playerName={selectedPlayerName}
+            messages={selectedPlayerMessages}
+            onClose={() => setSelectedPlayerId(null)}
+            t={t}
+          />
+        )}
+      </div>
+
+      {/* Responsive CSS */}
+      <style>{`
+        .day-phase-split {
+          flex-direction: row !important;
+        }
+        .day-phase-right {
+          flex: 0 0 420px;
+        }
+        @media (max-width: 900px) {
+          .day-phase-split {
+            flex-direction: column !important;
+          }
+          .day-phase-right {
+            flex: 0 0 auto !important;
+            order: -1;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function NightInfoPanel({
+  nightRevealed,
+  humanNightAction,
+  players,
+  humanPlayerIndex,
+  t,
+}: {
+  nightRevealed: ReturnType<typeof useGameStore.getState>['nightRevealed'];
+  humanNightAction: ReturnType<typeof useGameStore.getState>['humanNightAction'];
+  players: ReturnType<typeof useGameStore.getState>['players'];
+  humanPlayerIndex: number;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const role = players[humanPlayerIndex]?.originalRole;
+  const hasInfo = nightRevealed && nightRevealed.length > 0;
+  const isTroublemakerSwap = role === 'troublemaker'
+    && humanNightAction?.targets
+    && humanNightAction.targets.length >= 2;
+
+  return (
+    <div style={{
+      margin: '0 16px 8px', padding: '10px 16px', borderRadius: 8,
+      background: 'rgba(89,208,255,0.05)', border: '1px solid rgba(89,208,255,0.15)',
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: (hasInfo || isTroublemakerSwap) ? 6 : 0 }}>
+        🌙 {t('game.lastNightInfo')}
+      </div>
+      {hasInfo ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {nightRevealed.map((r, i) => (
+            <div key={i} style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+              {r.isCenterCard
+                ? `${t('game.centerCardN', { num: r.targetIndex + 1 })}: ${t(`roles.${r.role}`)}`
+                : `${players[r.targetIndex]?.name ?? '???'}: ${t(`roles.${r.role}`)}`}
             </div>
-          )}
-
-          {/* Input bar */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => setShowQuickSpeech(!showQuickSpeech)}
-              className="btn btn-secondary"
-              style={{ padding: '0 12px', minHeight: 44 }}
-              title={t('game.quickSpeech')}
-            >
-              💬
-            </button>
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              className="input"
-              style={{ flex: 1 }}
-              placeholder={t('game.typeMessage')}
-            />
-            <button onClick={handleSend} className="btn btn-success" style={{ padding: '0 16px', minHeight: 44, fontSize: 13 }}>
-              {t('game.send')}
-            </button>
-          </div>
+          ))}
+        </div>
+      ) : isTroublemakerSwap ? (
+        <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+          {t('game.cardsSwapped', {
+            player1: players.find((p) => p.id === humanNightAction!.targets![0])?.name ?? '???',
+            player2: players.find((p) => p.id === humanNightAction!.targets![1])?.name ?? '???',
+          })}
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          {t('game.noNightInfo')}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Final round notice */}
-      {roundComplete && isLastRound && (
-        <div style={{
-          margin: '0 16px 8px', padding: '8px 16px', borderRadius: 8, textAlign: 'center',
-          background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)',
-        }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-red)' }}>
-            {t('game.finalRound')}
-          </span>
+function SpeechHistoryPopover({
+  playerName,
+  messages,
+  onClose,
+  t,
+}: {
+  playerName: string;
+  messages: ChatMessage[];
+  onClose: () => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <div
+      className="panel-raised custom-scroll anim-fade-in-up"
+      style={{
+        position: 'absolute', top: 16, right: 16, left: 16,
+        maxHeight: 320, overflowY: 'auto',
+        padding: 16, borderRadius: 12, zIndex: 10,
+        background: 'rgba(19,26,46,0.95)', border: '1px solid rgba(89,208,255,0.3)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)' }}>
+          {playerName} — {t('game.speechHistory')}
         </div>
-      )}
-
-      {/* Action Footer */}
-      <div className="sticky-footer" style={{ display: 'flex', gap: 12, padding: 16 }}>
         <button
-          onClick={() => { if (window.confirm(t('game.quitConfirm'))) resetGame(); }}
+          onClick={onClose}
           className="btn btn-ghost"
-          style={{ fontSize: 13, padding: '0 12px', minWidth: 0, flexShrink: 0 }}
+          style={{ padding: '2px 8px', fontSize: 16, minHeight: 0, lineHeight: 1 }}
         >
           ✕
         </button>
-        {canStartNextRound && (
-          <button onClick={handleNextRound} className="btn btn-secondary" style={{ flex: 1, fontSize: 13 }}>
-            🔄 {t('game.nextRound')}
-          </button>
-        )}
-        <button
-          onClick={proceedToVote}
-          disabled={isProcessing}
-          className="btn btn-danger"
-          style={{ flex: 1, fontSize: 13 }}
-        >
-          {t('game.proceedToVote')} →
-        </button>
       </div>
+
+      {messages.length === 0 ? (
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>
+          {t('game.noSpeechYet')}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '8px 12px', borderRadius: 8,
+                background: 'rgba(89,208,255,0.05)', border: '1px solid rgba(89,208,255,0.1)',
+              }}
+            >
+              <p style={{ fontSize: 13, color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
+                {msg.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

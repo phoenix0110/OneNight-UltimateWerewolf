@@ -2,6 +2,13 @@ import { type App, cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { type Firestore, getFirestore } from 'firebase-admin/firestore';
 
+const useEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === 'true';
+
+if (useEmulators) {
+  process.env.FIRESTORE_EMULATOR_HOST ??= 'localhost:8080';
+  process.env.FIREBASE_AUTH_EMULATOR_HOST ??= 'localhost:9099';
+}
+
 let _app: App | null = null;
 let _db: Firestore | null = null;
 
@@ -13,6 +20,13 @@ function getAdminApp(): App {
   }
 
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
+
+  if (useEmulators) {
+    console.log('[firebase-admin] Using emulators (Firestore: localhost:8080, Auth: localhost:9099)');
+    _app = initializeApp({ projectId: projectId || 'demo-project' });
+    return _app;
+  }
+
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
