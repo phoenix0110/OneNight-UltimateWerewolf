@@ -31,7 +31,7 @@ export default function GameSetup() {
   const params = useParams();
   const locale = params.locale as string;
 
-  const { user } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const startGame = useGameStore((s) => s.startGame);
   const setLocale = useGameStore((s) => s.setLocale);
 
@@ -39,8 +39,16 @@ export default function GameSetup() {
   const [noGames, setNoGames] = useState(false);
 
   const nameList = PRESET_NAMES[locale] ?? PRESET_NAMES.en;
+
   const [selectedNameKey, setSelectedNameKey] = useState(nameList[0]);
   const [customName, setCustomName] = useState('');
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem('game_name_key');
+    const savedCustom = localStorage.getItem('game_custom_name');
+    if (savedKey) setSelectedNameKey(savedKey);
+    if (savedCustom) setCustomName(savedCustom);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -56,12 +64,25 @@ export default function GameSetup() {
       });
 
     getUserProfile(user.uid).then((profile) => {
-      if (profile?.nickname) {
+      if (profile?.nickname && !localStorage.getItem('game_name_key')) {
         setSelectedNameKey(CUSTOM_KEY);
         setCustomName(profile.nickname);
+        localStorage.setItem('game_name_key', CUSTOM_KEY);
+        localStorage.setItem('game_custom_name', profile.nickname);
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const persistNameChoice = (key: string, custom?: string) => {
+    setSelectedNameKey(key);
+    localStorage.setItem('game_name_key', key);
+    if (custom !== undefined) {
+      setCustomName(custom);
+      localStorage.setItem('game_custom_name', custom);
+    }
+  };
+
   const isCustom = selectedNameKey === CUSTOM_KEY;
   const playerName = isCustom ? customName : selectedNameKey;
 
@@ -135,7 +156,7 @@ export default function GameSetup() {
             {nameList.map((name) => (
               <button
                 key={name}
-                onClick={() => setSelectedNameKey(name)}
+                onClick={() => persistNameChoice(name)}
                 className={`btn ${selectedNameKey === name ? 'btn-success' : 'btn-secondary'}`}
                 style={{ fontSize: 13, padding: '6px 14px', minHeight: 36 }}
               >
@@ -143,7 +164,7 @@ export default function GameSetup() {
               </button>
             ))}
             <button
-              onClick={() => setSelectedNameKey(CUSTOM_KEY)}
+              onClick={() => persistNameChoice(CUSTOM_KEY)}
               className={`btn ${isCustom ? 'btn-success' : 'btn-secondary'}`}
               style={{ fontSize: 13, padding: '6px 14px', minHeight: 36 }}
             >
@@ -156,7 +177,10 @@ export default function GameSetup() {
             <input
               type="text"
               value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
+              onChange={(e) => {
+                setCustomName(e.target.value);
+                localStorage.setItem('game_custom_name', e.target.value);
+              }}
               className="input"
               placeholder={t('setup.namePlaceholder')}
               autoFocus
@@ -272,33 +296,50 @@ export default function GameSetup() {
 
       {/* Sticky Start Button */}
       <div className="sticky-footer" style={{ padding: 16 }}>
-        {user && gamesRemaining !== null && !noGames && (
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 6 }}>
-            {t('setup.gamesRemaining', { count: gamesRemaining })}
-          </p>
+        {!user ? (
+          <>
+            <p style={{ fontSize: 12, color: 'var(--accent-orange)', textAlign: 'center', marginBottom: 8 }}>
+              {t('setup.loginToPlay')}
+            </p>
+            <button
+              onClick={signInWithGoogle}
+              className="btn btn-success"
+              style={{ width: '100%', fontSize: 15, minHeight: 48 }}
+            >
+              {t('common.loginWithGoogle')}
+            </button>
+          </>
+        ) : (
+          <>
+            {gamesRemaining !== null && !noGames && (
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 6 }}>
+                {t('setup.gamesRemaining', { count: gamesRemaining })}
+              </p>
+            )}
+            {noGames && (
+              <p style={{ fontSize: 12, color: 'var(--accent-red)', textAlign: 'center', marginBottom: 8 }}>
+                {t('setup.noGamesRemaining')}
+              </p>
+            )}
+            {!canStart && !noGames && (
+              <p style={{ fontSize: 12, color: 'var(--accent-orange)', textAlign: 'center', marginBottom: 8 }}>
+                {!playerName.trim()
+                  ? t('setup.nameRequired')
+                  : selectedRoles.length !== requiredRoles
+                    ? t('setup.rolesRemaining', { count: requiredRoles - selectedRoles.length })
+                    : ''}
+              </p>
+            )}
+            <button
+              onClick={handleStart}
+              disabled={!canStart || noGames}
+              className="btn btn-success"
+              style={{ width: '100%', fontSize: 15, minHeight: 48 }}
+            >
+              {t('setup.startGame')}
+            </button>
+          </>
         )}
-        {noGames && (
-          <p style={{ fontSize: 12, color: 'var(--accent-red)', textAlign: 'center', marginBottom: 8 }}>
-            {t('setup.noGamesRemaining')}
-          </p>
-        )}
-        {!canStart && !noGames && (
-          <p style={{ fontSize: 12, color: 'var(--accent-orange)', textAlign: 'center', marginBottom: 8 }}>
-            {!playerName.trim()
-              ? t('setup.nameRequired')
-              : selectedRoles.length !== requiredRoles
-                ? t('setup.rolesRemaining', { count: requiredRoles - selectedRoles.length })
-                : ''}
-          </p>
-        )}
-        <button
-          onClick={handleStart}
-          disabled={!canStart || noGames}
-          className="btn btn-success"
-          style={{ width: '100%', fontSize: 15, minHeight: 48 }}
-        >
-          {t('setup.startGame')}
-        </button>
       </div>
     </div>
   );

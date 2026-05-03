@@ -372,7 +372,7 @@ function generateAINightAction(
 
   switch (role) {
     case 'seer': {
-      const viewPlayer = Math.random() > 0.4;
+      const viewPlayer = Math.random() > 0.7;
       if (viewPlayer) {
         const target =
           otherPlayers[Math.floor(Math.random() * otherPlayers.length)];

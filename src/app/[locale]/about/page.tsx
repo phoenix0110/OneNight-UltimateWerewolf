@@ -33,6 +33,38 @@ export default function AboutPage() {
 
         <section className="panel" style={{ padding: 20 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: 12 }}>
+            {t('legal.aboutAiDisclosureTitle')}
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-line' }}>
+            {t('legal.aboutAiDisclosureContent')}
+          </p>
+        </section>
+
+        <section className="panel" style={{ padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: 12 }}>
+            {t('legal.aboutDisclaimerTitle')}
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-line' }}>
+            {t('legal.aboutDisclaimerContent')}
+          </p>
+        </section>
+
+        <section className="panel" style={{ padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: 12 }}>
+            GitHub
+          </h3>
+          <a
+            href="https://github.com/phoenix0110/OneNight-UltimateWerewolf"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--accent-moon)', fontSize: 14, wordBreak: 'break-all' }}
+          >
+            github.com/phoenix0110/OneNight-UltimateWerewolf
+          </a>
+        </section>
+
+        <section className="panel" style={{ padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: 12 }}>
             {t('legal.contactTitle')}
           </h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8 }}>

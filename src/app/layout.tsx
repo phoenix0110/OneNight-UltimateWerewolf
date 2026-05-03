@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'One Night Werewolf',
+  title: 'AI Werewolf: Midnight Hunt',
   description: 'The classic social deduction game with AI opponents',
 };
 

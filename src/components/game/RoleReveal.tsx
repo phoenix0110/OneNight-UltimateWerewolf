@@ -43,6 +43,7 @@ export default function RoleReveal() {
   const players = useGameStore((s) => s.players);
   const humanPlayerIndex = useGameStore((s) => s.humanPlayerIndex);
   const proceedToNight = useGameStore((s) => s.proceedToNight);
+  const redealCards = useGameStore((s) => s.redealCards);
 
   const humanPlayer = players[humanPlayerIndex];
   if (!humanPlayer) return null;
@@ -206,24 +207,40 @@ export default function RoleReveal() {
         }}
       >
         <ActionFooter>
-          <button
-            onClick={proceedToNight}
-            className="btn btn-success"
-            style={{
-              fontSize: 16,
-              padding: '14px 40px',
-              minHeight: 48,
-              width: '100%',
-              maxWidth: 360,
-              margin: '0 auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            🌙 {t('game.night')} →
-          </button>
+          <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 360, margin: '0 auto' }}>
+            <button
+              onClick={redealCards}
+              className="btn btn-secondary"
+              style={{
+                fontSize: 14,
+                padding: '14px 20px',
+                minHeight: 48,
+                flex: '0 0 auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}
+            >
+              🔄 {t('game.redeal')}
+            </button>
+            <button
+              onClick={proceedToNight}
+              className="btn btn-success"
+              style={{
+                fontSize: 16,
+                padding: '14px 40px',
+                minHeight: 48,
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+            >
+              🌙 {t('game.night')} →
+            </button>
+          </div>
         </ActionFooter>
       </div>
     </TavernScene>

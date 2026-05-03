@@ -178,27 +178,12 @@ export default function RoleRevealCard({ role, animationDelay = 800 }: RoleRevea
           style={{
             fontSize: 26,
             color: theme.color,
-            marginBottom: 12,
+            marginBottom: 20,
             textShadow: `0 0 16px ${theme.color}50`,
             lineHeight: 1.2,
           }}
         >
           {t(`roles.${role}`)}
-        </div>
-
-        {/* Role description */}
-        <div
-          style={{
-            fontSize: 14,
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            marginBottom: 20,
-            maxWidth: 280,
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}
-        >
-          {t(`roles.${role}Desc`)}
         </div>
 
         {/* Divider */}

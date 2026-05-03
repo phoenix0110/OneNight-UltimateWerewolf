@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/auth-context';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import UserDropdown from '@/components/ui/UserDropdown';
 
+import type { User } from 'firebase/auth';
+
 const PHASES = [
   { icon: '⚙️', labelKey: 'landing.phaseSetup' },
   { icon: '🌙', labelKey: 'landing.phaseNight' },
@@ -15,6 +17,38 @@ const PHASES = [
   { icon: '🗳️', labelKey: 'landing.phaseVote' },
   { icon: '🏆', labelKey: 'landing.phaseResult' },
 ] as const;
+
+function PricingCard({ label, price, features, accentColor, productId, user, locale, buttonLabel, onLoginRequired }: {
+  label: string; price: string; features: string; accentColor: string;
+  productId: string | undefined; user: User | null; locale: string;
+  buttonLabel: string; onLoginRequired: () => void;
+}) {
+  return (
+    <div className="panel" style={{ padding: 14, borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor.replace('0.4', '0.15')}` }}>
+      <div style={{ color: 'var(--accent-cyan)', fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{label}</div>
+      <div style={{ color: 'var(--accent-moon)', fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{price}</div>
+      <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 14, lineHeight: 1.5 }}>{features}</div>
+      {user && productId ? (
+        <CreemCheckout
+          productId={productId}
+          customer={{ email: user.email || undefined, name: user.displayName || undefined }}
+          referenceId={user.uid}
+          successUrl={`/${locale}/checkout/success`}
+        >
+          <button className="btn btn-success" style={{ width: '100%', fontSize: 11 }}>{buttonLabel}</button>
+        </CreemCheckout>
+      ) : (
+        <button
+          onClick={() => !user ? onLoginRequired() : alert('Payment product not configured')}
+          className="btn btn-success"
+          style={{ width: '100%', fontSize: 11 }}
+        >
+          {buttonLabel}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const t = useTranslations();
@@ -108,80 +142,57 @@ export default function LandingPage() {
             {t('landing.subscribeDesc')}
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
             {/* Free Trial */}
-            <div className="panel" style={{ padding: 16 }}>
-              <div style={{ color: 'var(--accent-lime)', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{t('common.free')}</div>
-              <div style={{ color: 'var(--accent-moon)', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>$0</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
+            <div className="panel" style={{ padding: 14 }}>
+              <div style={{ color: 'var(--accent-lime)', fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{t('common.free')}</div>
+              <div style={{ color: 'var(--accent-moon)', fontSize: 20, fontWeight: 700, marginBottom: 8 }}>$0</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 14, lineHeight: 1.5 }}>
                 {t('landing.freeFeatures')}
               </div>
-              <button onClick={() => router.push(`/${locale}/game`)} className="btn btn-secondary" style={{ width: '100%', fontSize: 12 }}>
+              <button onClick={() => router.push(`/${locale}/game`)} className="btn btn-secondary" style={{ width: '100%', fontSize: 11 }}>
                 {t('landing.startFree')}
               </button>
             </div>
 
-            {/* Pay to Go */}
-            <div className="panel" style={{ padding: 16, borderColor: 'rgba(89,208,255,0.4)', boxShadow: '0 0 0 1px rgba(89,208,255,0.15)' }}>
-              <div style={{ color: 'var(--accent-cyan)', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{t('common.starter')}</div>
-              <div style={{ color: 'var(--accent-moon)', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
-                {t('landing.starterPrice')}
-              </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
-                {t('landing.starterFeatures')}
-              </div>
-              {user && process.env.NEXT_PUBLIC_CREEM_STARTER_PRODUCT_ID ? (
-                <CreemCheckout
-                  productId={process.env.NEXT_PUBLIC_CREEM_STARTER_PRODUCT_ID}
-                  customer={{ email: user.email || undefined, name: user.displayName || undefined }}
-                  referenceId={user.uid}
-                  successUrl={`/${locale}/checkout/success`}
-                >
-                  <button className="btn btn-success" style={{ width: '100%', fontSize: 12 }}>
-                    {t('landing.buyStarter')}
-                  </button>
-                </CreemCheckout>
-              ) : (
-                <button
-                  onClick={() => !user ? setShowLoginModal(true) : alert('Payment product not configured')}
-                  className="btn btn-success"
-                  style={{ width: '100%', fontSize: 12 }}
-                >
-                  {t('landing.buyStarter')}
-                </button>
-              )}
-            </div>
+            {/* Tier 1 — $1 / 2 games */}
+            <PricingCard
+              label={t('common.tier1')}
+              price={t('landing.tier1Price')}
+              features={t('landing.tier1Features')}
+              accentColor="rgba(89,208,255,0.4)"
+              productId={process.env.NEXT_PUBLIC_CREEM_TIER1_PRODUCT_ID}
+              user={user}
+              locale={locale}
+              buttonLabel={t('landing.buyNow')}
+              onLoginRequired={() => setShowLoginModal(true)}
+            />
 
-            {/* Monthly Pass */}
-            <div className="panel" style={{ padding: 16, borderColor: 'rgba(246,211,101,0.4)', boxShadow: '0 0 0 1px rgba(246,211,101,0.2)' }}>
-              <div style={{ color: 'var(--accent-moon)', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{t('common.monthly')}</div>
-              <div style={{ color: 'var(--accent-moon)', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
-                {t('landing.monthlyPrice')}
-              </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
-                {t('landing.monthlyFeatures')}
-              </div>
-              {user && process.env.NEXT_PUBLIC_CREEM_MONTHLY_PRODUCT_ID ? (
-                <CreemCheckout
-                  productId={process.env.NEXT_PUBLIC_CREEM_MONTHLY_PRODUCT_ID}
-                  customer={{ email: user.email || undefined, name: user.displayName || undefined }}
-                  referenceId={user.uid}
-                  successUrl={`/${locale}/checkout/success`}
-                >
-                  <button className="btn btn-success" style={{ width: '100%', fontSize: 12 }}>
-                    {t('landing.subscribeMonthly')}
-                  </button>
-                </CreemCheckout>
-              ) : (
-                <button
-                  onClick={() => !user ? setShowLoginModal(true) : alert('Payment product not configured')}
-                  className="btn btn-success"
-                  style={{ width: '100%', fontSize: 12 }}
-                >
-                  {t('landing.subscribeMonthly')}
-                </button>
-              )}
-            </div>
+            {/* Tier 2 — $2 / 5 games (highlighted) */}
+            <PricingCard
+              label={t('common.tier2')}
+              price={t('landing.tier2Price')}
+              features={t('landing.tier2Features')}
+              accentColor="rgba(125,255,152,0.4)"
+              productId={process.env.NEXT_PUBLIC_CREEM_TIER2_PRODUCT_ID}
+              user={user}
+              locale={locale}
+              buttonLabel={t('landing.buyNow')}
+              onLoginRequired={() => setShowLoginModal(true)}
+            />
+
+            {/* Tier 3 — $10 / 50 games */}
+            <PricingCard
+              label={t('common.tier3')}
+              price={t('landing.tier3Price')}
+              features={t('landing.tier3Features')}
+              accentColor="rgba(246,211,101,0.4)"
+              productId={process.env.NEXT_PUBLIC_CREEM_TIER3_PRODUCT_ID}
+              user={user}
+              locale={locale}
+              buttonLabel={t('landing.buyNow')}
+              onLoginRequired={() => setShowLoginModal(true)}
+            />
           </div>
 
           <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 16, textAlign: 'center', lineHeight: 1.6, fontStyle: 'italic', opacity: 0.8 }}>

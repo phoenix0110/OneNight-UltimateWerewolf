@@ -6,8 +6,13 @@ import { useParams, useRouter } from 'next/navigation';
 const SECTIONS = [
   { titleKey: 'legal.privacyDataTitle', contentKey: 'legal.privacyDataContent' },
   { titleKey: 'legal.privacyUsageTitle', contentKey: 'legal.privacyUsageContent' },
+  { titleKey: 'legal.privacyAiTitle', contentKey: 'legal.privacyAiContent' },
+  { titleKey: 'legal.privacyThirdPartyTitle', contentKey: 'legal.privacyThirdPartyContent' },
   { titleKey: 'legal.privacyCookiesTitle', contentKey: 'legal.privacyCookiesContent' },
+  { titleKey: 'legal.privacyRetentionTitle', contentKey: 'legal.privacyRetentionContent' },
+  { titleKey: 'legal.privacyRightsTitle', contentKey: 'legal.privacyRightsContent' },
   { titleKey: 'legal.privacySecurityTitle', contentKey: 'legal.privacySecurityContent' },
+  { titleKey: 'legal.privacyContactTitle', contentKey: 'legal.privacyContactContent' },
 ] as const;
 
 export default function PrivacyPage() {
@@ -28,7 +33,7 @@ export default function PrivacyPage() {
       </div>
 
       <div style={{ flex: 1, padding: '0 16px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8, padding: '0 4px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8, padding: '0 4px', whiteSpace: 'pre-line' }}>
           {t('legal.privacyIntro')}
         </p>
 
@@ -37,7 +42,7 @@ export default function PrivacyPage() {
             <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: 12 }}>
               {t(section.titleKey)}
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-line' }}>
               {t(section.contentKey)}
             </p>
           </section>

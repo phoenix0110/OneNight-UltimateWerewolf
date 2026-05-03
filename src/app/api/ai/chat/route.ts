@@ -44,7 +44,7 @@ interface ProviderConfig {
 }
 
 function getPhaseMaxTokens(phase?: string): number {
-  if (phase === 'vote') return 1024;
+  if (phase === 'vote') return 256;
   return 2048;
 }
 

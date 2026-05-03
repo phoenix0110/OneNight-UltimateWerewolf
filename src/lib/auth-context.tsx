@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               stats: { gamesPlayed: 0, wins: 0, losses: 0, winRate: 0 },
               stars: 0,
               rank: 'bronze_3',
-              subscription: { plan: 'free', gamesRemaining: 1, expiresAt: null },
+              subscription: { plan: 'free', gamesRemaining: 2, expiresAt: null },
               createdAt: serverTimestamp(),
             });
           }
