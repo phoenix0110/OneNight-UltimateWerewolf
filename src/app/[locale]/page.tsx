@@ -103,10 +103,6 @@ export default function LandingPage() {
           <h1 className="font-pixel text-glow-moon" style={{ fontSize: 26, color: 'var(--accent-moon)', marginBottom: 16, lineHeight: 1.4 }}>
             {t('landing.heroTitle')}
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 15, maxWidth: 400, margin: '0 auto 32px', lineHeight: 1.6 }}>
-            {t('landing.heroSubtitle')}
-          </p>
-
           <button
             onClick={() => router.push(`/${locale}/game`)}
             className="btn btn-success"
@@ -135,12 +131,9 @@ export default function LandingPage() {
 
         {/* ── Pricing ── */}
         <section style={{ width: '100%', maxWidth: 640, margin: '0 auto 48px' }}>
-          <h2 className="font-pixel" style={{ fontSize: 13, color: 'var(--accent-orange)', marginBottom: 12 }}>
+          <h2 className="font-pixel" style={{ fontSize: 20, color: 'var(--accent-orange)', marginBottom: 16 }}>
             {t('landing.subscribeTitle')}
           </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
-            {t('landing.subscribeDesc')}
-          </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
             {/* Free Trial */}

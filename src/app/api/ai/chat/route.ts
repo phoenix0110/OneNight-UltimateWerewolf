@@ -51,14 +51,15 @@ function getPhaseMaxTokens(phase?: string): number {
 function getProviders(): ProviderConfig[] {
   const providers: ProviderConfig[] = [];
 
-  const openrouterKey = (process.env.OPENROUTER_API_KEY || '').trim();
-  const model = process.env.AI_MODEL || 'google/gemini-3.1-flash-lite-preview';
-  if (openrouterKey) {
+  const primaryKey = (process.env.LLM_PRIMARY_API_KEY || '').trim();
+  const primaryBase = (process.env.LLM_PRIMARY_BASE_URL || 'https://hiapi.online/v1').replace(/\/+$/, '');
+  const primaryModel = process.env.LLM_PRIMARY_MODEL || 'gemini-3-flash';
+  if (primaryKey) {
     providers.push({
-      name: `OpenRouter(${model})`,
-      apiKey: openrouterKey,
-      baseUrl: 'https://openrouter.ai/api/v1',
-      model,
+      name: `Primary(${primaryModel})`,
+      apiKey: primaryKey,
+      baseUrl: primaryBase,
+      model: primaryModel,
       buildBody: (m, msgs, phase) => ({
         model: m,
         messages: msgs,

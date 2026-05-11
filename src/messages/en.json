@@ -26,7 +26,7 @@
   },
   "landing": {
     "heroTitle": "AI Werewolf: Midnight Hunt",
-    "heroSubtitle": "The classic social deduction game — now with AI opponents",
+    "heroSubtitle": "",
     "feature1Title": "AI Opponents",
     "feature1Desc": "Play against smart AI opponents",
     "feature2Title": "Pixel Art Style",
@@ -34,8 +34,8 @@
     "feature3Title": "All Classic Roles",
     "feature3Desc": "Werewolf, Seer, Robber, Troublemaker, and more",
     "subscribeTitle": "Choose Your Plan",
-    "subscribeDesc": "Pick the plan that suits your playstyle",
-    "freeFeatures": "Try 1 free game",
+    "subscribeDesc": "",
+    "freeFeatures": "Try 2 games for free",
     "tier1Features": "2 games",
     "tier1Price": "$1",
     "tier2Features": "5 games",
@@ -68,7 +68,7 @@
     "rolesRemaining": "Select {count} more role(s)",
     "noGamesRemaining": "No games remaining. Purchase more to continue playing!",
     "gamesRemaining": "{count} games remaining",
-    "loginToPlay": "Sign in to get 1 free game!",
+    "loginToPlay": "Sign in to get 2 free games!",
     "matchSummary": "Match Summary",
     "roles": "Roles",
     "defaultPlayerName": "Player"

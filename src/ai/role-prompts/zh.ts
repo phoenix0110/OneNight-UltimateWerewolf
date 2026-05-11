@@ -13,7 +13,7 @@ export const ROLE_PROMPT_CONFIGS_ZH: Record<RoleId, RolePromptConfig> = {
     teamObjective: '有同伴→间接掩护。独狼→用底牌伪装。',
     nightInfoUsage: '有同伴知道谁。独狼知道一张底牌。',
     strategy: {
-      core: '先听后说，观察谁跳身份。被抢牌时反咬对方。被指控追问细节。',
+      core: '先听后说，可以跳一个没人跳的身份混淆视听。被抢牌时反咬对方。被指控追问细节。必须掩护你认为是狼人的同伴，不然同伴被投出也是输',
     },
   },
   seer: {
@@ -35,7 +35,7 @@ export const ROLE_PROMPT_CONFIGS_ZH: Record<RoleId, RolePromptConfig> = {
       '第6步行动。被你交换的玩家现在是强盗但不知道。',
     ],
     teamObjective: '至少处决一名狼人。',
-    nightInfoUsage: '偷到好人→公开交换链。偷到狼人→你变狼人阵营，隐藏事实。',
+    nightInfoUsage: '偷到好人→公开交换链。偷到狼人→你变狼人阵营，除非确定狼人身份被捣蛋鬼换走，否则不允许透露。',
     strategy: {
       core: '偷到好人完整公开帮村庄。偷到狼人伪装其他身份。',
     },
