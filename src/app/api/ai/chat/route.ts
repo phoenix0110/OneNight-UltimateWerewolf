@@ -51,14 +51,15 @@ function getPhaseMaxTokens(phase?: string): number {
 function getProviders(): ProviderConfig[] {
   const providers: ProviderConfig[] = [];
 
-  const openrouterKey = (process.env.OPENROUTER_API_KEY || '').trim();
-  const model = process.env.AI_MODEL || 'google/gemini-3.1-flash-lite-preview';
-  if (openrouterKey) {
+  const primaryKey = (process.env.LLM_PRIMARY_API_KEY || '').trim();
+  const primaryBase = (process.env.LLM_PRIMARY_BASE_URL || 'https://hiapi.online/v1').replace(/\/+$/, '');
+  const primaryModel = process.env.LLM_PRIMARY_MODEL || 'gemini-3-flash';
+  if (primaryKey) {
     providers.push({
-      name: `OpenRouter(${model})`,
-      apiKey: openrouterKey,
-      baseUrl: 'https://openrouter.ai/api/v1',
-      model,
+      name: `Primary(${primaryModel})`,
+      apiKey: primaryKey,
+      baseUrl: primaryBase,
+      model: primaryModel,
       buildBody: (m, msgs, phase) => ({
         model: m,
         messages: msgs,
@@ -70,9 +71,9 @@ function getProviders(): ProviderConfig[] {
 
   const kimiKey = (process.env.AI_API_KEY || '').trim();
   const kimiBase = (process.env.AI_BASE_URL || 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
-  const fallbackModel = process.env.AI_FALLBACK_MODEL || 'kimi-k2.5';
+  const fallbackModel = process.env.AI_FALLBACK_MODEL || 'kimi-k2.6';
   if (kimiKey) {
-    const isKimiK25 = fallbackModel.startsWith('kimi-k2.5');
+    const isKimiK25 = fallbackModel.startsWith('kimi-k2.6');
     providers.push({
       name: `Kimi(${fallbackModel})`,
       apiKey: kimiKey,

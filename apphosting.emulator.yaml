@@ -1,0 +1,31 @@
+env:
+  - variable: NEXT_PUBLIC_USE_EMULATORS
+    value: "true"
+  - variable: NEXT_PUBLIC_APP_URL
+    value: "http://localhost:3000"
+  - variable: FIREBASE_ADMIN_PROJECT_ID
+    value: "onenight-werewolf-3dd14"
+  - variable: LLM_PRIMARY_BASE_URL
+    value: "https://hiapi.online/v1"
+  - variable: LLM_PRIMARY_MODEL
+    value: "gemini-3-flash"
+  - variable: AI_BASE_URL
+    value: "https://api.moonshot.cn/v1"
+  - variable: AI_FALLBACK_MODEL
+    value: "kimi-k2.6"
+  - variable: AI_DEBUG_LOG
+    value: "true"
+  - variable: NEXT_PUBLIC_CREEM_TIER1_PRODUCT_ID
+    value: "prod_5FWcfa9g281UieSDP9YBkw"
+  - variable: NEXT_PUBLIC_CREEM_TIER2_PRODUCT_ID
+    value: "prod_3O138mcS05S2IOm8JDnEAx"
+  - variable: NEXT_PUBLIC_CREEM_TIER3_PRODUCT_ID
+    value: "prod_3jxJV3jFPh9MEQRhpxWXdc"
+  - variable: LLM_PRIMARY_API_KEY
+    value: "set-in-local-emulator-or-replace-before-use"
+  - variable: AI_API_KEY
+    value: "set-in-local-emulator-or-replace-before-use"
+  - variable: CREEM_API_KEY
+    value: "set-in-local-emulator-or-replace-before-use"
+  - variable: CREEM_WEBHOOK_SECRET
+    value: "set-in-local-emulator-or-replace-before-use"

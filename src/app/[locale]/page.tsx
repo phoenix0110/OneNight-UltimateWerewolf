@@ -23,6 +23,11 @@ function PricingCard({ label, price, features, accentColor, productId, user, loc
   productId: string | undefined; user: User | null; locale: string;
   buttonLabel: string; onLoginRequired: () => void;
 }) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const successUrl = appUrl
+    ? `${appUrl.replace(/\/+$/, '')}/${locale}/checkout/success`
+    : `/${locale}/checkout/success`;
+
   return (
     <div className="panel" style={{ padding: 14, borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor.replace('0.4', '0.15')}` }}>
       <div style={{ color: 'var(--accent-cyan)', fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{label}</div>
@@ -33,7 +38,7 @@ function PricingCard({ label, price, features, accentColor, productId, user, loc
           productId={productId}
           customer={{ email: user.email || undefined, name: user.displayName || undefined }}
           referenceId={user.uid}
-          successUrl={`/${locale}/checkout/success`}
+          successUrl={successUrl}
         >
           <button className="btn btn-success" style={{ width: '100%', fontSize: 11 }}>{buttonLabel}</button>
         </CreemCheckout>
@@ -103,10 +108,6 @@ export default function LandingPage() {
           <h1 className="font-pixel text-glow-moon" style={{ fontSize: 26, color: 'var(--accent-moon)', marginBottom: 16, lineHeight: 1.4 }}>
             {t('landing.heroTitle')}
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 15, maxWidth: 400, margin: '0 auto 32px', lineHeight: 1.6 }}>
-            {t('landing.heroSubtitle')}
-          </p>
-
           <button
             onClick={() => router.push(`/${locale}/game`)}
             className="btn btn-success"
@@ -135,12 +136,9 @@ export default function LandingPage() {
 
         {/* ── Pricing ── */}
         <section style={{ width: '100%', maxWidth: 640, margin: '0 auto 48px' }}>
-          <h2 className="font-pixel" style={{ fontSize: 13, color: 'var(--accent-orange)', marginBottom: 12 }}>
+          <h2 className="font-pixel" style={{ fontSize: 20, color: 'var(--accent-orange)', marginBottom: 16 }}>
             {t('landing.subscribeTitle')}
           </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
-            {t('landing.subscribeDesc')}
-          </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
             {/* Free Trial */}

@@ -12,6 +12,38 @@ if (useEmulators) {
 let _app: App | null = null;
 let _db: Firestore | null = null;
 
+function resolveProjectId(): string | undefined {
+  const explicitProjectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
+  if (explicitProjectId) return explicitProjectId;
+
+  const publicProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  if (publicProjectId) return publicProjectId;
+
+  const firebaseConfig = process.env.FIREBASE_CONFIG;
+  if (!firebaseConfig) return undefined;
+
+  try {
+    const parsed = JSON.parse(firebaseConfig) as { projectId?: unknown };
+    return typeof parsed.projectId === 'string' ? parsed.projectId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizePrivateKey(rawKey?: string): string | undefined {
+  if (!rawKey) return undefined;
+
+  const key = rawKey.replace(/\\n/g, '\n').trim();
+  if (!key) return undefined;
+
+  if (key.includes('BEGIN PRIVATE KEY')) {
+    return key;
+  }
+
+  // App Hosting may inject only the base64 PEM body without headers.
+  return `-----BEGIN PRIVATE KEY-----\n${key}\n-----END PRIVATE KEY-----\n`;
+}
+
 function getAdminApp(): App {
   if (_app) return _app;
   if (getApps().length > 0) {
@@ -19,7 +51,7 @@ function getAdminApp(): App {
     return _app;
   }
 
-  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
+  const projectId = resolveProjectId();
 
   if (useEmulators) {
     console.log('[firebase-admin] Using emulators (Firestore: localhost:8080, Auth: localhost:9099)');
@@ -28,7 +60,7 @@ function getAdminApp(): App {
   }
 
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const privateKey = normalizePrivateKey(process.env.FIREBASE_ADMIN_PRIVATE_KEY);
 
   if (!projectId || !clientEmail || !privateKey) {
     console.warn('[firebase-admin] Missing credentials — Firestore writes in webhooks will fail');

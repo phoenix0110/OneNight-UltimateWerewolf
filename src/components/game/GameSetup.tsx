@@ -18,7 +18,7 @@ import MatchSummaryCard from './MatchSummaryCard';
 
 /** Preset player name lists — 10 per locale. */
 const PRESET_NAMES: Record<string, string[]> = {
-  zh: ['云中君', '夜未央', '风临尘', '月无痕', '星落辰', '霜凝雪', '墨飞白', '烟如织', '雨听禅', '花照影'],
+  zh: ['小明', '小红', '小刚', '小丽', '小军', '小梅', '小杰', '小雪', '小强', '小芳'],
   en: ['Sam', 'Max', 'Charlie', 'Jamie', 'Robin', 'Avery', 'Taylor', 'Kai', 'Skyler', 'River'],
 };
 
