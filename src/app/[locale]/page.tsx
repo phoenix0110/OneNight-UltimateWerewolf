@@ -23,6 +23,11 @@ function PricingCard({ label, price, features, accentColor, productId, user, loc
   productId: string | undefined; user: User | null; locale: string;
   buttonLabel: string; onLoginRequired: () => void;
 }) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const successUrl = appUrl
+    ? `${appUrl.replace(/\/+$/, '')}/${locale}/checkout/success`
+    : `/${locale}/checkout/success`;
+
   return (
     <div className="panel" style={{ padding: 14, borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor.replace('0.4', '0.15')}` }}>
       <div style={{ color: 'var(--accent-cyan)', fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{label}</div>
@@ -33,7 +38,7 @@ function PricingCard({ label, price, features, accentColor, productId, user, loc
           productId={productId}
           customer={{ email: user.email || undefined, name: user.displayName || undefined }}
           referenceId={user.uid}
-          successUrl={`/${locale}/checkout/success`}
+          successUrl={successUrl}
         >
           <button className="btn btn-success" style={{ width: '100%', fontSize: 11 }}>{buttonLabel}</button>
         </CreemCheckout>

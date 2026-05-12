@@ -71,9 +71,9 @@ function getProviders(): ProviderConfig[] {
 
   const kimiKey = (process.env.AI_API_KEY || '').trim();
   const kimiBase = (process.env.AI_BASE_URL || 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
-  const fallbackModel = process.env.AI_FALLBACK_MODEL || 'kimi-k2.5';
+  const fallbackModel = process.env.AI_FALLBACK_MODEL || 'kimi-k2.6';
   if (kimiKey) {
-    const isKimiK25 = fallbackModel.startsWith('kimi-k2.5');
+    const isKimiK25 = fallbackModel.startsWith('kimi-k2.6');
     providers.push({
       name: `Kimi(${fallbackModel})`,
       apiKey: kimiKey,

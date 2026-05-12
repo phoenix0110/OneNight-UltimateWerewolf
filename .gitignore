@@ -37,10 +37,15 @@ firestore-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+apphosting.local.yaml
+apphosting.*.local.yaml
 
 # local credential/config files
 *serviceAccount*.json
 *firebase-adminsdk*.json
+
+# local firebase state
+.firebase/
 
 # typescript
 *.tsbuildinfo

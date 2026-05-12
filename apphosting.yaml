@@ -1,0 +1,82 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  # maxInstances: 100
+  # concurrency: 80
+  # cpu: 1
+  # memoryMiB: 512
+
+# Environment variables and secrets.
+env:
+  - variable: NEXT_PUBLIC_USE_EMULATORS
+    value: "false"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_APP_URL
+    value: "https://one-night-wolf--onenight-werewolf-3dd14.us-east4.hosted.app"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_ADMIN_PROJECT_ID
+    value: "onenight-werewolf-3dd14"
+    availability:
+      - RUNTIME
+
+  - variable: LLM_PRIMARY_BASE_URL
+    value: "https://hiapi.online/v1"
+    availability:
+      - RUNTIME
+
+  - variable: LLM_PRIMARY_MODEL
+    value: "gemini-3-flash"
+    availability:
+      - RUNTIME
+
+  - variable: AI_BASE_URL
+    value: "https://api.moonshot.cn/v1"
+    availability:
+      - RUNTIME
+
+  - variable: AI_FALLBACK_MODEL
+    value: "kimi-k2.6"
+    availability:
+      - RUNTIME
+
+  - variable: AI_DEBUG_LOG
+    value: "true"
+    availability:
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_CREEM_TIER1_PRODUCT_ID
+    value: "prod_5FWcfa9g281UieSDP9YBkw"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_CREEM_TIER2_PRODUCT_ID
+    value: "prod_3O138mcS05S2IOm8JDnEAx"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_CREEM_TIER3_PRODUCT_ID
+    value: "prod_3jxJV3jFPh9MEQRhpxWXdc"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: LLM_PRIMARY_API_KEY
+    secret: LLM_PRIMARY_API_KEY
+
+  - variable: AI_API_KEY
+    secret: AI_API_KEY
+
+  - variable: CREEM_API_KEY
+    secret: CREEM_API_KEY
+
+  - variable: CREEM_WEBHOOK_SECRET
+    secret: CREEM_WEBHOOK_SECRET

@@ -52,6 +52,48 @@
     "ui": {
       "enabled": true
     },
-    "singleProjectMode": true
+    "singleProjectMode": true,
+    "apphosting": {
+      "port": 5002,
+      "rootDirectory": "./",
+      "startCommand": "npm run dev"
+    }
+  },
+  "apphosting": [
+    {
+      "backendId": "one-night-wolf",
+      "rootDir": "/",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions"
+      ],
+      "alwaysDeployFromSource": true
+    },
+    {
+      "backendId": "one-night-wolf",
+      "rootDir": "/",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions"
+      ],
+      "alwaysDeployFromSource": true
+    }
+  ],
+  "remoteconfig": {
+    "template": "remoteconfig.template.json"
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "My App",
+        "supportEmail": "yinshiwei0110@hotmail.com"
+      }
+    }
   }
 }
